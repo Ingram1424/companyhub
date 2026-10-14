@@ -18,16 +18,16 @@ class AccountingApp {
 
     // 1. Storage & State Initialization
     initStorage() {
-        const DATA_VERSION = "v7_username_noquicklogin";
+        const DATA_VERSION = "v9_persisted_companies";
         const storedVersion = localStorage.getItem("mc_data_version");
 
         if (storedVersion !== DATA_VERSION) {
-            // Clear legacy mock data to start completely fresh
-            localStorage.removeItem("mc_companies");
-            localStorage.removeItem("mc_transactions");
-            localStorage.removeItem("mc_users");
-            localStorage.removeItem("mc_current_user");
             localStorage.setItem("mc_data_version", DATA_VERSION);
+            // If stored companies is empty or missing, seed it with the 5 restored companies
+            const stored = localStorage.getItem("mc_companies");
+            if (!stored || stored === "[]") {
+                localStorage.setItem("mc_companies", JSON.stringify(INITIAL_MOCK_DATA.companies));
+            }
         }
 
         const storedCompanies = localStorage.getItem("mc_companies");
@@ -36,7 +36,11 @@ class AccountingApp {
         const storedCurrentUser = localStorage.getItem("mc_current_user");
         const storedSupabase = localStorage.getItem("mc_supabase_cfg");
 
-        this.companies = storedCompanies ? JSON.parse(storedCompanies) : [...INITIAL_MOCK_DATA.companies];
+        const parsedCompanies = storedCompanies ? JSON.parse(storedCompanies) : null;
+        this.companies = (parsedCompanies && parsedCompanies.length > 0) 
+            ? parsedCompanies 
+            : [...INITIAL_MOCK_DATA.companies];
+
         this.transactions = storedTransactions ? JSON.parse(storedTransactions) : [...INITIAL_MOCK_DATA.transactions];
         this.categories = [...INITIAL_MOCK_DATA.categories];
         this.users = storedUsers ? JSON.parse(storedUsers) : [...INITIAL_MOCK_DATA.users];
@@ -58,7 +62,7 @@ class AccountingApp {
         this.viewerCurrentUrl = null;
         this.viewerCurrentTitle = null;
 
-        this.saveLocalData(false);
+        this.saveLocalData(true);
     }
 
     async syncWithServer() {
@@ -66,20 +70,28 @@ class AccountingApp {
             const res = await fetch("/api/data");
             if (res.ok) {
                 const data = await res.json();
-                if (data && (Array.isArray(data.companies) || Array.isArray(data.users))) {
-                    let updated = false;
-                    if (Array.isArray(data.companies)) {
-                        this.companies = data.companies;
-                        updated = true;
-                    }
-                    if (Array.isArray(data.users) && data.users.length > 0) {
-                        this.users = data.users;
-                        updated = true;
-                    }
-                    if (updated) {
-                        this.saveLocalData(false);
-                        this.render();
-                    }
+                let updated = false;
+
+                // 1. Synchronize Companies
+                if (Array.isArray(data.companies) && data.companies.length > 0) {
+                    this.companies = data.companies;
+                    updated = true;
+                } else if (this.companies && this.companies.length > 0) {
+                    // Browser has companies, server has none: sync to server!
+                    this.saveLocalData(true);
+                }
+
+                // 2. Synchronize Users
+                if (Array.isArray(data.users) && data.users.length > 0) {
+                    this.users = data.users;
+                    updated = true;
+                } else if (this.users && this.users.length > 0) {
+                    this.saveLocalData(true);
+                }
+
+                if (updated) {
+                    this.saveLocalData(false);
+                    this.render();
                 }
             }
         } catch (e) {

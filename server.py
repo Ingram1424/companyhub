@@ -11,26 +11,63 @@ import sys
 import json
 
 PORT = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8000))
-DATA_DIR = os.environ.get("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
+
+# Persistent directory: support Railway volumes (/data) or custom DATA_DIR
+REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+if os.path.isdir("/data"):
+    DATA_DIR = "/data"
+elif os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") and os.path.isdir(os.environ["RAILWAY_VOLUME_MOUNT_PATH"]):
+    DATA_DIR = os.environ["RAILWAY_VOLUME_MOUNT_PATH"]
+elif os.environ.get("DATA_DIR") and os.path.isdir(os.environ.get("DATA_DIR")):
+    DATA_DIR = os.environ.get("DATA_DIR")
+else:
+    DATA_DIR = REPO_DIR
+
 DATA_FILE = os.path.join(DATA_DIR, "app_data.json")
+BUNDLE_FILE = os.path.join(REPO_DIR, "app_data.json")
 
 def load_data():
+    # 1. Try active DATA_FILE
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                d = json.load(f)
+                if d and (d.get("companies") or d.get("users")):
+                    return d
         except Exception as e:
-            print("Error reading data file:", e)
+            print("Error reading DATA_FILE:", e)
+
+    # 2. Try repo bundled app_data.json
+    if os.path.exists(BUNDLE_FILE):
+        try:
+            with open(BUNDLE_FILE, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                if DATA_FILE != BUNDLE_FILE:
+                    save_data(d)
+                return d
+        except Exception as e:
+            print("Error reading BUNDLE_FILE:", e)
+
     return None
 
 def save_data(data):
+    saved = False
     try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
+        saved = True
     except Exception as e:
-        print("Error saving data file:", e)
-        return False
+        print("Error saving to DATA_FILE:", e)
+
+    if BUNDLE_FILE != DATA_FILE and os.path.exists(os.path.dirname(BUNDLE_FILE)):
+        try:
+            with open(BUNDLE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    return saved
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -83,25 +120,11 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(current_dir)
 
-    # Initialize data file with empty companies & default admin if not existing
+    # Initialize data file from bundled data if active DATA_FILE does not exist
     if not os.path.exists(DATA_FILE):
-        default_state = {
-            "companies": [],
-            "users": [
-                {
-                    "id": "admin",
-                    "username": "admin",
-                    "full_name": "ผู้ดูแลระบบ (Administrator)",
-                    "email": "admin",
-                    "password": "admin123",
-                    "role": "super_admin",
-                    "company_id": None,
-                    "title": "ผู้ดูแลระบบศูนย์รวมลิงก์ (System Administrator)",
-                    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                }
-            ]
-        }
-        save_data(default_state)
+        existing = load_data()
+        if existing:
+            save_data(existing)
 
     handler = CustomHTTPRequestHandler
     # Bind to 0.0.0.0 for Railway / Docker
