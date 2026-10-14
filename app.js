@@ -32,6 +32,7 @@ class AccountingApp {
 
         const storedCompanies = localStorage.getItem("mc_companies");
         const storedTransactions = localStorage.getItem("mc_transactions");
+        const storedUsers = localStorage.getItem("mc_users");
         const storedLocalUser = localStorage.getItem("mc_current_user");
         const storedSessionUser = sessionStorage.getItem("mc_current_user");
         const storedCurrentUser = storedLocalUser || storedSessionUser;
