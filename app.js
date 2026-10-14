@@ -18,7 +18,7 @@ class AccountingApp {
 
     // 1. Storage & State Initialization
     initStorage() {
-        const DATA_VERSION = "v6_clean_nouserreg";
+        const DATA_VERSION = "v7_username_noquicklogin";
         const storedVersion = localStorage.getItem("mc_data_version");
 
         if (storedVersion !== DATA_VERSION) {
@@ -42,8 +42,8 @@ class AccountingApp {
         this.users = storedUsers ? JSON.parse(storedUsers) : [...INITIAL_MOCK_DATA.users];
         this.supabaseCfg = storedSupabase ? JSON.parse(storedSupabase) : { url: "", key: "", enabled: false };
 
-        // Authentication & Navigation state
-        this.currentUser = storedCurrentUser ? JSON.parse(storedCurrentUser) : (this.users[0] || null);
+        // Authentication & Navigation state: require login if not currently authenticated
+        this.currentUser = storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
         this.currentCompanyId = this.companies[0] ? this.companies[0].id : null;
         this.viewMode = this.currentUser ? "portal" : "login"; // 'login', 'portal', 'viewer', or 'workspace'
         this.selectedCategory = "all";
@@ -396,42 +396,28 @@ class AccountingApp {
     // VIEW 0: AUTHENTICATION / LOGIN SCREEN
     // =========================================================================
     renderLoginScreen() {
-        const quickList = document.getElementById("login-quick-users-list");
-        if (!quickList) return;
-
-        quickList.innerHTML = this.users.map(u => {
-            const roleName = this.getRoleThaiShortName(u.role);
-            return `
-                <button type="button" onclick="app.loginAs('${u.id}')" class="w-full p-2.5 rounded-2xl border border-slate-200/90 hover:border-blue-500 hover:bg-blue-50/40 transition text-left flex items-center justify-between group">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <img src="${u.avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 group-hover:scale-105 transition flex-shrink-0" />
-                        <div class="min-w-0">
-                            <div class="font-bold text-xs text-slate-800 flex items-center gap-1.5 truncate">
-                                <span>${u.full_name}</span>
-                            </div>
-                            <div class="text-[11px] text-slate-400 truncate mt-0.5">${u.title || roleName} (${u.email})</div>
-                        </div>
-                    </div>
-                    <span class="text-[11px] font-semibold text-blue-600 opacity-0 group-hover:opacity-100 transition whitespace-nowrap pl-2">เข้าสู่ระบบ →</span>
-                </button>
-            `;
-        }).join("");
+        // Pure login screen requiring manual credentials
     }
 
     handleLoginFormSubmit(e) {
         e.preventDefault();
-        const emailInput = document.getElementById("login-email");
+        const usernameInput = document.getElementById("login-username") || document.getElementById("login-email");
         const passInput = document.getElementById("login-password");
-        const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+        const username = usernameInput ? usernameInput.value.trim().toLowerCase() : "";
         const password = passInput ? passInput.value.trim() : "";
 
-        const foundUser = this.users.find(u => u.email.toLowerCase() === email);
+        const foundUser = this.users.find(u => 
+            (u.username && u.username.toLowerCase() === username) || 
+            (u.email && u.email.toLowerCase() === username) ||
+            (u.id && u.id.toLowerCase() === username)
+        );
+
         if (!foundUser) {
-            this.showToast("ไม่พบบัญชีผู้ใช้งานนี้ในระบบ (กรุณาให้ผู้ดูแลระบบทำการ Gen User)", "error");
+            this.showToast("ไม่พบชื่อผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบอีกครั้ง", "error");
             return;
         }
 
-        const validPassword = foundUser.password || "123456";
+        const validPassword = foundUser.password || "admin123";
         if (password !== validPassword) {
             this.showToast("รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง", "error");
             return;
@@ -2749,8 +2735,8 @@ class AccountingApp {
                                 <input type="text" id="gen-user-name" placeholder="เช่น นายสมหมาย การเงิน" class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600" required />
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">อีเมลผู้ใช้งาน (สำหรับล็อกอิน) *</label>
-                                <input type="email" id="gen-user-email" placeholder="เช่น sommai@company.com" class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono" required />
+                                <label class="block font-semibold text-slate-700 mb-1">ชื่อผู้ใช้งาน (Username สำหรับล็อกอิน) *</label>
+                                <input type="text" id="gen-user-username" placeholder="เช่น sommai, user01" class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono" required />
                             </div>
                         </div>
 
@@ -2822,7 +2808,7 @@ class AccountingApp {
                                 ${this.users.map(u => {
                                     const comp = this.companies.find(c => c.id === u.company_id);
                                     const isInitialAdmin = u.id === "admin";
-                                    const pass = u.password || "123456";
+                                    const pass = u.password || "admin123";
 
                                     return `
                                         <tr class="hover:bg-slate-50/80 transition">
@@ -2831,7 +2817,7 @@ class AccountingApp {
                                                     <img src="${u.avatar}" class="w-7 h-7 rounded-lg object-cover border border-slate-200 flex-shrink-0" />
                                                     <div class="min-w-0">
                                                         <div class="font-bold text-slate-900 truncate">${u.full_name}</div>
-                                                        <div class="text-[11px] text-slate-400 font-mono truncate">${u.email}</div>
+                                                        <div class="text-[11px] text-slate-400 font-mono truncate">Username: ${u.username || u.email}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -2882,28 +2868,29 @@ class AccountingApp {
     handleGenerateUser(e) {
         e.preventDefault();
         const nameInput = document.getElementById("gen-user-name");
-        const emailInput = document.getElementById("gen-user-email");
+        const usernameInput = document.getElementById("gen-user-username") || document.getElementById("gen-user-email");
         const roleSelect = document.getElementById("gen-user-role");
         const compSelect = document.getElementById("gen-user-company");
         const passInput = document.getElementById("gen-user-password");
 
-        if (!nameInput || !emailInput || !roleSelect || !passInput) return;
+        if (!nameInput || !usernameInput || !roleSelect || !passInput) return;
 
         const name = nameInput.value.trim();
-        const email = emailInput.value.trim().toLowerCase();
+        const username = usernameInput.value.trim().toLowerCase();
         const role = roleSelect.value;
         const compId = (role === "super_admin" || role === "auditor") ? null : (compSelect ? compSelect.value : null);
         const password = passInput.value.trim();
 
-        if (this.users.some(u => u.email.toLowerCase() === email)) {
-            this.showToast(`อีเมล ${email} มีอยู่ในระบบแล้ว กรุณาใช้อีเมลอื่น`, "error");
+        if (this.users.some(u => (u.username && u.username.toLowerCase() === username) || (u.email && u.email.toLowerCase() === username))) {
+            this.showToast(`ชื่อผู้ใช้งาน ${username} มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`, "error");
             return;
         }
 
         const newUser = {
             id: "user_" + Date.now(),
+            username: username,
             full_name: name,
-            email: email,
+            email: username,
             password: password,
             role: role,
             company_id: compId || null,
@@ -2926,10 +2913,10 @@ class AccountingApp {
         const comp = this.companies.find(c => c.id === u.company_id);
         const compName = comp ? comp.name_th : "ส่วนกลาง (ทุกบริษัท)";
         const roleName = this.getRoleThaiName(u.role);
-        const pass = u.password || "123456";
+        const pass = u.password || "admin123";
         const loginUrl = window.location.origin + window.location.pathname;
 
-        const text = `==============================\n🔑 ข้อมูลการเข้าสู่ระบบศูนย์รวมลิงก์\n==============================\n🌐 เว็บไซต์: ${loginUrl}\n👤 ชื่อผู้ใช้งาน: ${u.full_name}\n📧 อีเมล: ${u.email}\n🔐 รหัสผ่าน: ${pass}\n🏢 สังกัด: ${compName}\n🛡️ บทบาท: ${roleName}\n==============================`;
+        const text = `==============================\n🔑 ข้อมูลการเข้าสู่ระบบศูนย์รวมลิงก์\n==============================\n🌐 เว็บไซต์: ${loginUrl}\n👤 ชื่อ-นามสกุล: ${u.full_name}\n🆔 Username: ${u.username || u.email}\n🔐 Password: ${pass}\n🏢 สังกัด: ${compName}\n🛡️ บทบาท: ${roleName}\n==============================`;
 
         if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {

@@ -90,9 +90,10 @@ if __name__ == "__main__":
             "users": [
                 {
                     "id": "admin",
+                    "username": "admin",
                     "full_name": "ผู้ดูแลระบบ (Administrator)",
-                    "email": "admin@company.com",
-                    "password": "123456",
+                    "email": "admin",
+                    "password": "admin123",
                     "role": "super_admin",
                     "company_id": None,
                     "title": "ผู้ดูแลระบบศูนย์รวมลิงก์ (System Administrator)",

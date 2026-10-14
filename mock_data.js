@@ -103,9 +103,10 @@ const INITIAL_MOCK_DATA = {
     users: [
         {
             id: "admin",
+            username: "admin",
             full_name: "ผู้ดูแลระบบ (Administrator)",
-            email: "admin@company.com",
-            password: "123456",
+            email: "admin",
+            password: "admin123",
             role: "super_admin",
             company_id: null,
             title: "ผู้ดูแลระบบศูนย์รวมลิงก์ (System Administrator)",

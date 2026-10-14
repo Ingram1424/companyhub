@@ -97,28 +97,25 @@
             <!-- Main Login Card -->
             <div class="bg-white p-7 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-900">เข้าสู่ระบบบัญชี</h2>
-                    <p class="text-xs text-slate-500 mt-1">กรอกข้อมูลผู้ใช้งาน หรือเลือกล็อกอินด่วนสำหรับทดสอบ</p>
+                    <h2 class="text-lg font-bold text-slate-900">เข้าสู่ระบบ</h2>
+                    <p class="text-xs text-slate-500 mt-1">กรอกชื่อผู้ใช้งานและรหัสผ่านเพื่อเข้าใช้งานระบบ</p>
                 </div>
 
                 <!-- Standard Login Form -->
                 <form onsubmit="app.handleLoginFormSubmit(event)" class="space-y-4 text-xs">
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">อีเมลผู้ใช้งาน</label>
+                        <label class="block font-semibold text-slate-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
                         <div class="relative">
-                            <i data-lucide="mail" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="email" id="login-email" value="admin@company.com" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 transition" placeholder="name@company.com" required />
+                            <i data-lucide="user" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="login-username" value="admin" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 transition font-medium" placeholder="ชื่อผู้ใช้งาน (เช่น admin)" required />
                         </div>
                     </div>
 
                     <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="block font-semibold text-slate-700">รหัสผ่าน</label>
-                            <span class="text-[11px] text-slate-400">รหัสผ่านเริ่มต้น: 123456</span>
-                        </div>
+                        <label class="block font-semibold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
                         <div class="relative">
                             <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="password" id="login-password" value="123456" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 transition" required />
+                            <input type="password" id="login-password" value="admin123" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 transition" placeholder="รหัสผ่าน" required />
                         </div>
                     </div>
 
@@ -134,17 +131,6 @@
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </form>
-
-                <!-- Divider -->
-                <div class="relative flex items-center justify-center">
-                    <div class="border-t border-slate-100 w-full"></div>
-                    <span class="bg-white px-3 text-[11px] text-slate-400 font-medium whitespace-nowrap">หรือคลิกเข้าสู่ระบบด่วน</span>
-                </div>
-
-                <!-- Quick Login Roles List -->
-                <div id="login-quick-users-list" class="space-y-2">
-                    <!-- Populated dynamically by app.js -->
-                </div>
             </div>
 
             <div class="text-center mt-6 text-[11px] text-slate-400">
@@ -207,9 +193,6 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200/80">
                 <div class="flex flex-wrap items-center gap-1.5" id="portal-category-filters">
                     <button onclick="app.filterCategory('all')" class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-navy-900 text-white transition shadow-xs" data-cat="all">ทั้งหมด</button>
-                    <button onclick="app.filterCategory('เทคโนโลยี & ซอฟต์แวร์')" class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition" data-cat="เทคโนโลยี & ซอฟต์แวร์">💻 เทคโนโลยี</button>
-                    <button onclick="app.filterCategory('ขนส่ง & คลังสินค้า')" class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition" data-cat="ขนส่ง & คลังสินค้า">🚚 ขนส่ง & คลัง</button>
-                    <button onclick="app.filterCategory('ค้าปลีก & อีคอมเมิร์ซ')" class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition" data-cat="ค้าปลีก & อีคอมเมิร์ซ">🛍️ ค้าปลีก</button>
                 </div>
 
                 <div class="flex items-center gap-2">
