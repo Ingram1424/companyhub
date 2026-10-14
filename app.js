@@ -459,32 +459,33 @@ class AccountingApp {
             const isSuperAdmin = this.hasPermission("manage_settings");
 
             userHeader.innerHTML = `
-                <div class="flex items-center gap-2.5 bg-slate-100/70 border border-slate-200/80 py-1 px-2.5 rounded-xl">
-                    <img src="${this.currentUser.avatar}" class="w-6 h-6 rounded-full object-cover border border-slate-200" />
-                    <div class="text-left">
-                        <div class="text-xs font-bold text-slate-800 leading-tight truncate max-w-[130px] sm:max-w-none">${this.currentUser.full_name}</div>
+                <!-- User Profile Chip -->
+                <div class="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 py-1 px-2 sm:px-2.5 rounded-xl">
+                    <img src="${this.currentUser.avatar}" class="w-6 h-6 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+                    <div class="text-left hidden xs:block">
+                        <div class="text-xs font-bold text-slate-800 leading-tight truncate max-w-[90px] sm:max-w-none">${this.currentUser.full_name}</div>
                         <div class="text-[10px] text-slate-400 font-medium">${roleName}</div>
                     </div>
                 </div>
 
                 ${isSuperAdmin ? `
-                    <button onclick="app.openUserManagerModal()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs" title="สร้างและจัดการบัญชีผู้ใช้งาน (Gen User)">
-                        <i data-lucide="users" class="w-3.5 h-3.5"></i>
-                        <span>จัดการผู้ใช้ (Gen User)</span>
+                    <button onclick="app.openUserManagerModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs active:scale-95" title="จัดการผู้ใช้งาน (Gen User)">
+                        <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                        <span class="hidden sm:inline">จัดการผู้ใช้ (Gen User)</span>
+                        <span class="sm:hidden">ผู้ใช้</span>
+                    </button>
+
+                    <button onclick="app.openCompanyModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl transition shadow-sm active:scale-95" title="เพิ่มบริษัท/ระบบงาน">
+                        <i data-lucide="plus" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                        <span class="hidden sm:inline">+ เพิ่มบริษัท</span>
+                        <span class="sm:hidden">+ บริษัท</span>
                     </button>
                 ` : ''}
 
-                <button onclick="app.logout()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl transition" title="ออกจากระบบ">
+                <button onclick="app.logout()" class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl transition active:scale-95" title="ออกจากระบบ">
                     <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">ออกจากระบบ</span>
+                    <span class="hidden sm:inline">ออกระบบ</span>
                 </button>
-
-                ${isSuperAdmin ? `
-                    <button onclick="app.openCompanyModal()" class="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl transition shadow-sm">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        <span>+ เพิ่มบริษัท/ระบบงาน</span>
-                    </button>
-                ` : ''}
             `;
         }
 
@@ -575,11 +576,11 @@ class AccountingApp {
             const subLinks = c.sub_links || [];
 
             return `
-                <div class="bg-white rounded-3xl border ${isUserHome ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200/80'} p-6 flex flex-col justify-between hover:shadow-lg hover:border-slate-300 transition duration-200 group ${isLocked ? 'opacity-50 grayscale' : ''}">
+                <div class="bg-white rounded-2xl sm:rounded-3xl border ${isUserHome ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200/80'} p-4 sm:p-6 flex flex-col justify-between hover:shadow-lg hover:border-slate-300 transition duration-200 group ${isLocked ? 'opacity-50 grayscale' : ''}">
                     <div>
                         <!-- Card Header: Logo, Status & Category -->
                         <div class="flex items-start justify-between gap-3">
-                            <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl shadow-xs overflow-hidden flex-shrink-0 group-hover:scale-105 transition">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl sm:text-3xl shadow-xs overflow-hidden flex-shrink-0 group-hover:scale-105 transition">
                                 ${c.logo_image ? `<img src="${c.logo_image}" class="w-full h-full object-cover" />` : `<span>${c.logo_emoji || '🏢'}</span>`}
                             </div>
                             <div class="flex flex-col items-end gap-1.5">
@@ -594,7 +595,7 @@ class AccountingApp {
                         </div>
 
                         <!-- Company Titles -->
-                        <div class="mt-4">
+                        <div class="mt-3.5 sm:mt-4">
                             <div class="flex items-center gap-1.5">
                                 <h3 class="text-base font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition">${c.name_th}</h3>
                                 ${isUserHome ? `<span class="text-[9px] font-bold px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded">ของคุณ</span>` : ''}
@@ -604,7 +605,7 @@ class AccountingApp {
                         </div>
 
                         <!-- Primary Website Link Bar -->
-                        <div class="mt-4 p-3 bg-slate-50/90 rounded-2xl border border-slate-200/70 flex items-center justify-between gap-2">
+                        <div class="mt-3.5 sm:mt-4 p-2.5 sm:p-3 bg-slate-50/90 rounded-xl sm:rounded-2xl border border-slate-200/70 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2.5 min-w-0">
                                 <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">
                                     <i data-lucide="globe" class="w-3.5 h-3.5"></i>
@@ -616,13 +617,13 @@ class AccountingApp {
                                     </a>
                                 </div>
                             </div>
-                            <button onclick="app.copyCompanyUrl('${targetUrl}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition flex-shrink-0">
+                            <button onclick="app.copyCompanyUrl('${targetUrl}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition flex-shrink-0 active:scale-90">
                                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
 
                         <!-- Sub-Links (ระบบงานย่อยในเครือ) -->
-                        <div class="mt-4 space-y-1.5">
+                        <div class="mt-3.5 sm:mt-4 space-y-1.5">
                             <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
                                 <span>ระบบงานย่อย (${subLinks.length})</span>
                                 <span class="text-[10px] text-slate-400 font-normal">คลิกเพื่อเปิด</span>
@@ -635,7 +636,7 @@ class AccountingApp {
                                             <span class="font-medium text-slate-700 truncate group-hover/sub:text-blue-900 transition">${sub.title}</span>
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0">
-                                            <a href="${sub.url && /^https?:\/\//i.test(sub.url) ? sub.url : 'https://' + (sub.url || '')}" target="_blank" rel="noopener noreferrer" title="เปิดแท็บใหม่" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition">
+                                            <a href="${sub.url && /^https?:\/\//i.test(sub.url) ? sub.url : 'https://' + (sub.url || '')}" target="_blank" rel="noopener noreferrer" title="เปิดแท็บใหม่" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition active:scale-90">
                                                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                             </a>
                                         </div>
@@ -648,29 +649,29 @@ class AccountingApp {
                     </div>
 
                     <!-- Card Actions -->
-                    <div class="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
+                    <div class="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-100 flex flex-col gap-2.5">
                         <!-- Single Primary Launch Button -->
                         <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" 
-                            class="w-full py-2.5 px-4 bg-navy-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+                            class="w-full py-3 px-4 bg-navy-900 hover:bg-slate-800 active:scale-[0.98] text-white text-sm font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
                             <span>เปิดระบบ</span>
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
                         </a>
 
                         <!-- Utility Footer -->
                         <div class="flex items-center justify-between text-xs pt-1 px-1">
                             ${canEdit ? `
-                                <button onclick="app.openEditCompanyModal('${c.id}')" class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-blue-600 transition">
+                                <button onclick="app.openEditCompanyModal('${c.id}')" class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-blue-600 transition p-1">
                                     <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                                     <span>แก้ไขเว็บ & ข้อมูล</span>
                                 </button>
                             ` : '<div></div>'}
                             
-                            <div class="flex items-center gap-2">
-                                <button onclick="app.enterWorkspace('${c.id}')" class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-navy-900 transition" title="ระบบบัญชีและงบการเงิน">
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <button onclick="app.enterWorkspace('${c.id}')" class="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-navy-900 transition p-1" title="ระบบบัญชีและงบการเงิน">
                                     <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
                                     <span>บัญชีภายใน</span>
                                 </button>
-                                <button onclick="app.copyInviteLink('${c.id}')" title="คัดลอกลิงก์ตรง" class="p-1 text-slate-400 hover:text-blue-600 transition">
+                                <button onclick="app.copyInviteLink('${c.id}')" title="คัดลอกลิงก์ตรง" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg transition active:scale-90">
                                     <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
@@ -2234,26 +2235,26 @@ class AccountingApp {
         this.tempEditingLogo = null;
 
         modalContent.innerHTML = `
-            <div class="p-6 sm:p-8">
-                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div class="p-4 sm:p-8">
+                <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                             <i data-lucide="building-2" class="w-4 h-4"></i>
                         </div>
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900">+ เพิ่มบริษัทหรือระบบงานใหม่</h2>
-                            <p class="text-xs text-slate-400">เพิ่มบริษัทในเครือ พร้อมระบุลิงก์เว็บไซต์และระบบงาน</p>
+                        <div class="min-w-0">
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900 truncate">+ เพิ่มบริษัทหรือระบบงานใหม่</h2>
+                            <p class="text-[11px] sm:text-xs text-slate-400 truncate">เพิ่มบริษัทในเครือ พร้อมระบุลิงก์เว็บไซต์และระบบงาน</p>
                         </div>
                     </div>
-                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
 
-                <form onsubmit="app.handleSaveCompany(event)" class="mt-5 space-y-4 text-xs">
+                <form onsubmit="app.handleSaveCompany(event)" class="mt-4 sm:mt-5 space-y-3.5 sm:space-y-4 text-xs">
                     <!-- Logo Section -->
-                    <div class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div class="p-3.5 sm:p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
                         <label class="block font-bold text-slate-800 text-xs">โลโก้และรูปภาพบริษัท (Company Logo)</label>
                         
-                        <div class="flex flex-col sm:flex-row items-center gap-4">
+                        <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                             <div id="edit-logo-preview-box" class="w-16 h-16 rounded-2xl bg-white border-2 border-dashed border-slate-200 flex items-center justify-center text-3xl shadow-xs overflow-hidden flex-shrink-0">
                                 <span id="edit-preview-emoji">🏢</span>
                             </div>
@@ -2264,10 +2265,10 @@ class AccountingApp {
                             </div>
                         </div>
 
-                        <div class="pt-2 border-t border-slate-200/60 flex items-center gap-2">
+                        <div class="pt-2 border-t border-slate-200/60 flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span class="text-[11px] font-semibold text-slate-500">หรือเลือก Emoji:</span>
                             <input type="text" id="new-comp-emoji" value="🏢" maxlength="4" oninput="app.handleEmojiInput(this.value)" class="w-10 px-2 py-1 bg-white border border-slate-200 rounded-lg text-center text-sm font-semibold" />
-                            <div class="flex items-center gap-1">
+                            <div class="flex flex-wrap items-center gap-1">
                                 ${['🏢', '💻', '🚚', '🛍️', '⚡', '🏥', '🌾', '🏗️', '☕', '📱'].map(e => `
                                     <button type="button" onclick="document.getElementById('new-comp-emoji').value='${e}'; app.clearLogoImage();" class="p-1 hover:bg-slate-200 rounded-lg transition text-sm">${e}</button>
                                 `).join('')}
@@ -2301,9 +2302,9 @@ class AccountingApp {
                         <textarea id="new-comp-desc" rows="2" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="อธิบายหน้าที่ของเว็บไซต์หรือบริการของบริษัท"></textarea>
                     </div>
 
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition">ยกเลิก</button>
-                        <button type="submit" class="px-5 py-2 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5">
+                    <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+                        <button type="button" onclick="app.closeModal()" class="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition text-center">ยกเลิก</button>
+                        <button type="submit" class="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 active:scale-[0.98]">
                             <i data-lucide="check" class="w-3.5 h-3.5"></i>
                             <span>บันทึกและสร้างบริษัท</span>
                         </button>
@@ -2366,21 +2367,21 @@ class AccountingApp {
         this.tempEditingSubLinks = comp.sub_links ? JSON.parse(JSON.stringify(comp.sub_links)) : [];
 
         modalContent.innerHTML = `
-            <div class="p-6 sm:p-8">
-                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div class="p-4 sm:p-8">
+                <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                             <i data-lucide="edit-3" class="w-4 h-4"></i>
                         </div>
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900">แก้ไขข้อมูล เว็บไซต์ และลิงก์บริษัท</h2>
-                            <p class="text-xs text-slate-400">รหัสบริษัท: ${comp.code}</p>
+                        <div class="min-w-0">
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900 truncate">แก้ไขข้อมูล เว็บไซต์ และลิงก์บริษัท</h2>
+                            <p class="text-[11px] sm:text-xs text-slate-400 truncate">รหัสบริษัท: ${comp.code}</p>
                         </div>
                     </div>
-                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
 
-                <form onsubmit="app.handleUpdateCompany(event, '${comp.id}')" class="mt-5 space-y-4 text-xs">
+                <form onsubmit="app.handleUpdateCompany(event, '${comp.id}')" class="mt-4 sm:mt-5 space-y-3.5 sm:space-y-4 text-xs">
                     
                     <!-- Logo / Image Branding Section -->
                     <div class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
@@ -2485,18 +2486,17 @@ class AccountingApp {
                                 <input type="text" id="edit-new-sub-badge" placeholder="ป้าย (บริการ)" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-center" />
                             </div>
                             <div class="sm:col-span-1">
-                                <button type="button" onclick="app.addNewSubLink()" class="w-full h-full py-1.5 px-2 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition">
-                                    + เพิ่ม
+                                <button type="button" onclick="app.addNewSubLink()" class="w-full py-2.5 sm:py-1.5 px-3 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition active:scale-95 flex items-center justify-center gap-1">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>เพิ่มระบบ</span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-
-
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition">ยกเลิก</button>
-                        <button type="submit" class="px-5 py-2 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5">
+                    <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+                        <button type="button" onclick="app.closeModal()" class="w-full sm:w-auto px-4 py-2.5 sm:py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition text-center">ยกเลิก</button>
+                        <button type="submit" class="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 active:scale-[0.98]">
                             <i data-lucide="check" class="w-3.5 h-3.5"></i>
                             <span>บันทึกการแก้ไขข้อมูล</span>
                         </button>
@@ -2520,13 +2520,15 @@ class AccountingApp {
         }
 
         container.innerHTML = this.tempEditingSubLinks.map((sub, idx) => `
-            <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 text-xs">
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 text-xs gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                     <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 flex-shrink-0">${sub.badge || 'ระบบ'}</span>
-                    <span class="font-medium text-slate-800 truncate">${sub.title}</span>
-                    <span class="font-mono text-[11px] text-blue-600 truncate max-w-[200px]">${sub.url}</span>
+                    <div class="min-w-0">
+                        <div class="font-medium text-slate-800 truncate">${sub.title}</div>
+                        <div class="font-mono text-[10px] text-blue-600 truncate max-w-[150px] sm:max-w-xs">${sub.url}</div>
+                    </div>
                 </div>
-                <button type="button" onclick="app.removeSubLink(${idx})" class="p-1 text-slate-400 hover:text-rose-600 rounded transition flex-shrink-0" title="ลบรายการนี้">
+                <button type="button" onclick="app.removeSubLink(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition flex-shrink-0 active:scale-90" title="ลบรายการนี้">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
@@ -2696,31 +2698,31 @@ class AccountingApp {
         const defaultPass = this.generateRandomPassword();
 
         modalContent.innerHTML = `
-            <div class="p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
+            <div class="p-4 sm:p-8 max-w-4xl mx-auto space-y-5">
                 <!-- Header -->
-                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                            <i data-lucide="users" class="w-5 h-5"></i>
+                <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                         </div>
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900">จัดการผู้ใช้งานและออกสิทธิ์ (Gen User System)</h2>
-                            <p class="text-xs text-slate-400 mt-0.5">ระบบปิด ปลอดภัย 100% ไม่มีฟอร์มลงทะเบียนสาธารณะ - ผู้ดูแลระบบเป็นผู้ออกบัญชีและส่งรหัสผ่านให้ผู้ใช้งาน</p>
+                        <div class="min-w-0">
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900 truncate">จัดการผู้ใช้งานและออกสิทธิ์ (Gen User System)</h2>
+                            <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">ระบบปิด ปลอดภัย 100% - ผู้ดูแลระบบเป็นผู้ออกบัญชีและส่งรหัสผ่านให้ผู้ใช้งาน</p>
                         </div>
                     </div>
-                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition">
-                        <i data-lucide="x" class="w-5 h-5"></i>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                        <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
 
                 <!-- Form: Generate New User -->
-                <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80">
-                    <div class="flex items-center gap-2 mb-4">
+                <div class="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80">
+                    <div class="flex items-center gap-2 mb-3.5 sm:mb-4">
                         <span class="w-2 h-2 rounded-full bg-blue-600"></span>
                         <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">สร้างบัญชีผู้ใช้งานใหม่ (Generate Account)</h3>
                     </div>
 
-                    <form onsubmit="app.handleGenerateUser(event)" class="space-y-4 text-xs">
+                    <form onsubmit="app.handleGenerateUser(event)" class="space-y-3.5 sm:space-y-4 text-xs">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">ชื่อ-นามสกุลผู้ใช้งาน *</label>
@@ -2753,12 +2755,12 @@ class AccountingApp {
 
                         <div>
                             <label class="block font-semibold text-slate-700 mb-1">รหัสผ่านสำหรับเข้าสู่ระบบ (Password) *</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <div class="relative flex-1">
                                     <i data-lucide="key" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
                                     <input type="text" id="gen-user-password" value="${defaultPass}" class="w-full pl-10 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-600" required />
                                 </div>
-                                <button type="button" onclick="app.refreshGeneratedPassword()" class="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs">
+                                <button type="button" onclick="app.refreshGeneratedPassword()" class="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold transition flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs active:scale-95">
                                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-600"></i>
                                     <span>🎲 สุ่มรหัสใหม่</span>
                                 </button>
@@ -2767,7 +2769,7 @@ class AccountingApp {
                         </div>
 
                         <div class="pt-2 flex items-center justify-end">
-                            <button type="submit" class="px-5 py-2.5 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center gap-2">
+                            <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2 active:scale-[0.98]">
                                 <i data-lucide="user-plus" class="w-4 h-4"></i>
                                 <span>✨ สร้างบัญชีและคัดลอกข้อมูลส่งให้ผู้ใช้</span>
                             </button>
@@ -2782,11 +2784,11 @@ class AccountingApp {
                             <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">บัญชีผู้ใช้งานในระบบทั้งหมด</h3>
                             <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">${this.users.length} บัญชี</span>
                         </div>
-                        <span class="text-[11px] text-slate-400">คลิกที่ปุ่มคัดลอกเพื่อส่งรหัสเข้าสู่ระบบให้พนักงาน</span>
+                        <span class="text-[11px] text-slate-400 hidden sm:inline">คลิกที่ปุ่มคัดลอกเพื่อส่งรหัสเข้าสู่ระบบให้พนักงาน</span>
                     </div>
 
-                    <div class="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs max-h-72 overflow-y-auto">
-                        <table class="w-full text-left text-xs border-collapse">
+                    <div class="border border-slate-200/80 rounded-2xl overflow-x-auto overflow-y-auto bg-white shadow-2xs max-h-72">
+                        <table class="w-full min-w-[540px] text-left text-xs border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px]">
                                     <th class="py-2.5 px-4">ผู้ใช้งาน</th>
@@ -2826,12 +2828,13 @@ class AccountingApp {
                                             </td>
                                             <td class="py-2.5 px-4 text-center whitespace-nowrap">
                                                 <div class="flex items-center justify-center gap-1.5">
-                                                    <button onclick="app.copyUserCredentials('${u.id}')" title="คัดลอกข้อมูลส่งให้ผู้ใช้" class="px-2.5 py-1 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition flex items-center gap-1">
+                                                    <button onclick="app.copyUserCredentials('${u.id}')" title="คัดลอกข้อมูลส่งให้ผู้ใช้" class="px-2.5 py-1 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition flex items-center gap-1 active:scale-95">
                                                         <i data-lucide="copy" class="w-3 h-3"></i>
-                                                        <span>คัดลอกข้อมูลส่งผู้ใช้</span>
+                                                        <span class="hidden sm:inline">คัดลอกข้อมูลส่งผู้ใช้</span>
+                                                        <span class="sm:hidden">คัดลอก</span>
                                                     </button>
                                                     ${!isInitialAdmin ? `
-                                                        <button onclick="app.deleteGeneratedUser('${u.id}')" title="ลบบัญชีนี้" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                                                        <button onclick="app.deleteGeneratedUser('${u.id}')" title="ลบบัญชีนี้" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition active:scale-95">
                                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                                         </button>
                                                     ` : ''}
@@ -2846,7 +2849,7 @@ class AccountingApp {
                 </div>
 
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-end">
-                    <button type="button" onclick="app.closeModal()" class="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition text-xs">
+                    <button type="button" onclick="app.closeModal()" class="w-full sm:w-auto px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition text-xs text-center">
                         ปิดหน้าต่าง
                     </button>
                 </div>
@@ -2987,8 +2990,18 @@ class AccountingApp {
         this.render();
     }
 
+    toggleMobileSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        if (!sidebar) return;
+        sidebar.classList.toggle("hidden");
+    }
+
     switchTab(tab) {
         this.activeTab = tab;
+        const sidebar = document.getElementById("sidebar");
+        if (sidebar && window.innerWidth < 768) {
+            sidebar.classList.add("hidden");
+        }
         this.render();
     }
 
@@ -3088,7 +3101,7 @@ class AccountingApp {
         const toastMsg = document.getElementById("toast-message");
         if (!toast || !toastMsg) return;
         toastMsg.textContent = msg;
-        toast.className = `fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-white text-xs font-semibold transition-all duration-300 ${
+        toast.className = `fixed bottom-5 left-1/2 -translate-x-1/2 sm:left-auto sm:right-5 sm:translate-x-0 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-white text-xs font-semibold transition-all duration-300 max-w-[90vw] whitespace-nowrap ${
             type === 'success' ? 'bg-emerald-600' :
             type === 'error' ? 'bg-rose-600' : 'bg-slate-900'
         }`;
