@@ -32,8 +32,10 @@ class AccountingApp {
 
         const storedCompanies = localStorage.getItem("mc_companies");
         const storedTransactions = localStorage.getItem("mc_transactions");
-        const storedUsers = localStorage.getItem("mc_users");
-        const storedCurrentUser = localStorage.getItem("mc_current_user");
+        const storedLocalUser = localStorage.getItem("mc_current_user");
+        const storedSessionUser = sessionStorage.getItem("mc_current_user");
+        const storedCurrentUser = storedLocalUser || storedSessionUser;
+        this.rememberLogin = !!storedLocalUser;
         const storedSupabase = localStorage.getItem("mc_supabase_cfg");
 
         const parsedCompanies = storedCompanies ? JSON.parse(storedCompanies) : null;
@@ -104,9 +106,14 @@ class AccountingApp {
         localStorage.setItem("mc_transactions", JSON.stringify(this.transactions));
         localStorage.setItem("mc_users", JSON.stringify(this.users));
         if (this.currentUser) {
-            localStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+            if (this.rememberLogin) {
+                localStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+            } else {
+                sessionStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+            }
         } else {
             localStorage.removeItem("mc_current_user");
+            sessionStorage.removeItem("mc_current_user");
         }
         localStorage.setItem("mc_supabase_cfg", JSON.stringify(this.supabaseCfg));
 
@@ -407,14 +414,30 @@ class AccountingApp {
     // =========================================================================
     // VIEW 0: AUTHENTICATION / LOGIN SCREEN
     // =========================================================================
+    togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
     renderLoginScreen() {
-        // Pure login screen requiring manual credentials
+        const uInput = document.getElementById("login-username");
+        const pInput = document.getElementById("login-password");
+        if (uInput && !this.currentUser) uInput.value = "";
+        if (pInput && !this.currentUser) pInput.value = "";
+        if (window.lucide) window.lucide.createIcons();
     }
 
     handleLoginFormSubmit(e) {
         e.preventDefault();
         const usernameInput = document.getElementById("login-username") || document.getElementById("login-email");
         const passInput = document.getElementById("login-password");
+        const rememberChk = document.getElementById("login-remember");
         const username = usernameInput ? usernameInput.value.trim().toLowerCase() : "";
         const password = passInput ? passInput.value.trim() : "";
 
@@ -435,13 +458,15 @@ class AccountingApp {
             return;
         }
 
-        this.loginAs(foundUser.id);
+        const remember = rememberChk ? rememberChk.checked : false;
+        this.loginAs(foundUser.id, remember);
     }
 
-    loginAs(userId) {
+    loginAs(userId, remember = false) {
         const user = this.users.find(u => u.id === userId) || this.users[0];
         this.currentUser = user;
-        this.saveLocalData();
+        this.rememberLogin = remember;
+        this.saveLocalData(true);
         
         this.showToast(`เข้าสู่ระบบสำเร็จ: ${this.currentUser.full_name}`, "success");
 
@@ -455,8 +480,14 @@ class AccountingApp {
 
     logout() {
         this.currentUser = null;
+        this.rememberLogin = false;
         localStorage.removeItem("mc_current_user");
+        sessionStorage.removeItem("mc_current_user");
         this.viewMode = "login";
+        const uInput = document.getElementById("login-username");
+        const pInput = document.getElementById("login-password");
+        if (uInput) uInput.value = "";
+        if (pInput) pInput.value = "";
         this.showToast("ออกจากระบบเรียบร้อยแล้ว", "info");
         this.render();
     }
