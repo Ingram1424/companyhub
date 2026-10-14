@@ -1,0 +1,15 @@
+{
+  "companies": [],
+  "users": [
+    {
+      "id": "admin",
+      "full_name": "ผู้ดูแลระบบ (Administrator)",
+      "email": "admin@company.com",
+      "password": "123456",
+      "role": "super_admin",
+      "company_id": null,
+      "title": "ผู้ดูแลระบบศูนย์รวมลิงก์ (System Administrator)",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# Multi-Company Hub Python Requirements
+# Standard library is used (zero external dependencies)
