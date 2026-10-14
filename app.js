@@ -569,6 +569,9 @@ class AccountingApp {
             const isLocked = userRestrictedCompId && !isUserHome;
             const canEdit = this.hasPermission("manage_settings") || (this.currentUser && this.currentUser.company_id === c.id && this.currentUser.role === "company_manager");
             const websiteClean = (c.website_url || "").replace(/^https?:\/\//, '').replace(/\/$/, '');
+            const targetUrl = (c.website_url && /^https?:\/\//i.test(c.website_url))
+                ? c.website_url
+                : `https://${c.website_url || ''}`;
             const subLinks = c.sub_links || [];
 
             return `
@@ -608,12 +611,12 @@ class AccountingApp {
                                 </div>
                                 <div class="min-w-0">
                                     <div class="text-[10px] font-semibold text-slate-400">เว็บไซต์หลัก</div>
-                                    <a href="${c.website_url}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-medium text-blue-600 hover:underline truncate block">
+                                    <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-medium text-blue-600 hover:underline truncate block">
                                         ${websiteClean || 'https://...'}
                                     </a>
                                 </div>
                             </div>
-                            <button onclick="app.copyCompanyUrl('${c.website_url}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition flex-shrink-0">
+                            <button onclick="app.copyCompanyUrl('${targetUrl}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition flex-shrink-0">
                                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -632,10 +635,7 @@ class AccountingApp {
                                             <span class="font-medium text-slate-700 truncate group-hover/sub:text-blue-900 transition">${sub.title}</span>
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0">
-                                            <button onclick="app.openEmbeddedViewer('${c.id}', '${sub.url}', '${sub.title}')" title="เปิดดูในระบบ" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition">
-                                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                            </button>
-                                            <a href="${sub.url}" target="_blank" rel="noopener noreferrer" title="เปิดแท็บใหม่" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition">
+                                            <a href="${sub.url && /^https?:\/\//i.test(sub.url) ? sub.url : 'https://' + (sub.url || '')}" target="_blank" rel="noopener noreferrer" title="เปิดแท็บใหม่" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition">
                                                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                             </a>
                                         </div>
@@ -649,20 +649,12 @@ class AccountingApp {
 
                     <!-- Card Actions -->
                     <div class="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-2.5">
-                        <div class="flex items-center gap-2">
-                            <!-- Primary Launch: Embed in Hub -->
-                            <button onclick="app.openEmbeddedViewer('${c.id}', '${c.website_url}', 'เว็บไซต์หลัก')" 
-                                class="flex-1 py-2.5 px-3 bg-navy-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
-                                <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
-                                <span>เปิดดูในระบบ</span>
-                            </button>
-                            <!-- Secondary Launch: External Tab -->
-                            <a href="${c.website_url}" target="_blank" rel="noopener noreferrer" 
-                                class="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl border border-blue-200 transition flex items-center justify-center gap-1.5 flex-shrink-0">
-                                <span>เปิดแท็บใหม่</span>
-                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                            </a>
-                        </div>
+                        <!-- Single Primary Launch Button -->
+                        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" 
+                            class="w-full py-2.5 px-4 bg-navy-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+                            <span>เปิดระบบ</span>
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        </a>
 
                         <!-- Utility Footer -->
                         <div class="flex items-center justify-between text-xs pt-1 px-1">
