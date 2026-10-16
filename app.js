@@ -512,6 +512,11 @@ class AccountingApp {
                     </div>
                 </div>
 
+                <button onclick="app.openChangePasswordModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs active:scale-95" title="เปลี่ยนรหัสผ่าน">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-amber-600 flex-shrink-0"></i>
+                    <span class="hidden sm:inline">เปลี่ยนรหัส</span>
+                </button>
+
                 ${isSuperAdmin ? `
                     <button onclick="app.openUserManagerModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs active:scale-95" title="จัดการผู้ใช้งาน (Gen User)">
                         <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
@@ -927,6 +932,11 @@ class AccountingApp {
                     <span class="text-xs font-semibold text-slate-800 truncate max-w-[140px]">${this.currentUser.full_name}</span>
                     <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700">${roleShort}</span>
                 </div>
+
+                <button onclick="app.openChangePasswordModal()" class="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-slate-700 hover:text-navy-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs active:scale-95" title="เปลี่ยนรหัสผ่าน">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span class="hidden sm:inline">เปลี่ยนรหัส</span>
+                </button>
 
                 <button onclick="app.logout()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ออกจากระบบ">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -2877,6 +2887,9 @@ class AccountingApp {
                                                         <span class="hidden sm:inline">คัดลอกข้อมูลส่งผู้ใช้</span>
                                                         <span class="sm:hidden">คัดลอก</span>
                                                     </button>
+                                                    <button onclick="app.openChangePasswordModal('${u.id}')" title="เปลี่ยนรหัสผ่านให้ผู้ใช้นี้" class="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition active:scale-95">
+                                                        <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                                                    </button>
                                                     ${!isInitialAdmin ? `
                                                         <button onclick="app.deleteGeneratedUser('${u.id}')" title="ลบบัญชีนี้" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition active:scale-95">
                                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2985,8 +2998,172 @@ class AccountingApp {
         }
     }
 
-    openUserModal() {
-        this.openUserManagerModal();
+    openChangePasswordModal(targetUserId = null) {
+        const modal = document.getElementById("modal-container");
+        const modalContent = document.getElementById("modal-content");
+        if (!modal || !modalContent) return;
+
+        const isSelf = !targetUserId || (this.currentUser && targetUserId === this.currentUser.id);
+        const targetUser = isSelf ? this.currentUser : this.users.find(u => u.id === targetUserId);
+        if (!targetUser) return;
+
+        const roleText = this.getRoleThaiShortName(targetUser.role);
+
+        modalContent.innerHTML = `
+            <div class="p-5 sm:p-7 max-w-md mx-auto space-y-5">
+                <!-- Header -->
+                <div class="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="key" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="text-sm sm:text-base font-bold text-slate-900 truncate">
+                                ${isSelf ? 'เปลี่ยนรหัสผ่านของคุณ' : `ตั้งรหัสผ่านใหม่: ${targetUser.full_name}`}
+                            </h2>
+                            <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
+                                ${isSelf ? 'กำหนดรหัสผ่านใหม่เพื่อใช้เข้าสู่ระบบในครั้งถัดไป' : 'กำหนดรหัสผ่านใหม่ให้กับบัญชีผู้ใช้งานนี้'}
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- User Info Preview Chip -->
+                <div class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                    <img src="${targetUser.avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 flex-shrink-0" />
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs font-bold text-slate-800 truncate">${targetUser.full_name}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">ชื่อผู้ใช้งาน: <span class="font-semibold text-slate-700">${targetUser.username || targetUser.email}</span></div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white border border-slate-200 text-slate-600 flex-shrink-0">
+                        ${roleText}
+                    </span>
+                </div>
+
+                <!-- Form -->
+                <form onsubmit="app.handleChangePasswordSubmit(event, '${targetUser.id}')" class="space-y-4 text-xs">
+                    ${isSelf ? `
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">รหัสผ่านเดิมปัจจุบัน *</label>
+                            <div class="relative">
+                                <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="password" id="cp-current-password" placeholder="กรอกรหัสผ่านเดิมที่ใช้งานอยู่" class="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition" required autocomplete="current-password" />
+                                <button type="button" onclick="app.togglePasswordVisibility('cp-current-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-lg transition" title="แสดง/ซ่อนรหัสผ่าน">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="font-semibold text-slate-700">รหัสผ่านใหม่ (New Password) *</label>
+                            <span class="text-[10px] text-slate-400 font-medium">อย่างน้อย 4 ตัวอักษร</span>
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="key" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="password" id="cp-new-password" placeholder="กรอกรหัสผ่านใหม่" minlength="4" class="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition font-mono" required autocomplete="new-password" />
+                            <button type="button" onclick="app.togglePasswordVisibility('cp-new-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-lg transition" title="แสดง/ซ่อนรหัสผ่าน">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">ยืนยันรหัสผ่านใหม่อีกครั้ง *</label>
+                        <div class="relative">
+                            <i data-lucide="check" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="password" id="cp-confirm-password" placeholder="กรอกรหัสผ่านใหม่อีกครั้งให้ตรงกัน" minlength="4" class="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 transition font-mono" required autocomplete="new-password" />
+                            <button type="button" onclick="app.togglePasswordVisibility('cp-confirm-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-lg transition" title="แสดง/ซ่อนรหัสผ่าน">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition text-xs">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="px-5 py-2.5 bg-navy-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition shadow-sm flex items-center gap-1.5 active:scale-[0.98]">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            <span>บันทึกรหัสผ่านใหม่</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        modal.classList.remove("hidden");
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    handleChangePasswordSubmit(e, targetUserId) {
+        e.preventDefault();
+        const isSelf = !targetUserId || (this.currentUser && targetUserId === this.currentUser.id);
+        const targetUser = isSelf ? this.currentUser : this.users.find(u => u.id === targetUserId);
+        if (!targetUser) return;
+
+        const currentPassInput = document.getElementById("cp-current-password");
+        const newPassInput = document.getElementById("cp-new-password");
+        const confirmPassInput = document.getElementById("cp-confirm-password");
+
+        if (!newPassInput || !confirmPassInput) return;
+
+        const newPass = newPassInput.value.trim();
+        const confirmPass = confirmPassInput.value.trim();
+
+        if (isSelf) {
+            const currentPass = currentPassInput ? currentPassInput.value.trim() : "";
+            const validOldPass = targetUser.password || "admin123";
+            if (currentPass !== validOldPass) {
+                this.showToast("รหัสผ่านเดิมไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง", "error");
+                if (currentPassInput) {
+                    currentPassInput.focus();
+                    currentPassInput.select();
+                }
+                return;
+            }
+
+            if (newPass === currentPass) {
+                this.showToast("รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม", "error");
+                newPassInput.focus();
+                return;
+            }
+        }
+
+        if (newPass.length < 4) {
+            this.showToast("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร", "error");
+            newPassInput.focus();
+            return;
+        }
+
+        if (newPass !== confirmPass) {
+            this.showToast("รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน กรุณาตรวจสอบ", "error");
+            confirmPassInput.focus();
+            return;
+        }
+
+        // Update target user password in user array
+        targetUser.password = newPass;
+        const userIdx = this.users.findIndex(u => u.id === targetUser.id);
+        if (userIdx !== -1) {
+            this.users[userIdx].password = newPass;
+        }
+
+        if (isSelf) {
+            this.currentUser.password = newPass;
+        }
+
+        this.saveLocalData(true);
+        this.closeModal();
+
+        const successMsg = isSelf 
+            ? "✅ เปลี่ยนรหัสผ่านสำเร็จแล้ว สามารถใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป" 
+            : `✅ บันทึกรหัสผ่านใหม่ให้ ${targetUser.full_name} เรียบร้อยแล้ว`;
+        this.showToast(successMsg, "success");
     }
 
     closeModal() {

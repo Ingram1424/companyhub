@@ -382,9 +382,14 @@
                         <div id="user-role-badge" class="text-[10px] text-slate-500 truncate">บทบาท</div>
                     </div>
                 </div>
-                <button onclick="app.logout()" title="ออกจากระบบ" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition flex-shrink-0">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                </button>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button onclick="app.openChangePasswordModal()" title="เปลี่ยนรหัสผ่าน" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="app.logout()" title="ออกจากระบบ" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
         </aside>
 
