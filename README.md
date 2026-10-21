@@ -1,6 +1,6 @@
 # 🏢 ระบบบัญชีกลางและจัดการการเงินรวม (Multi-Company Accounting Hub)
 
-เว็บแอปพลิเคชัน SPA (Single-Page Application) สไตล์ Modern Minimal โทนสีกรมท่า-น้ำเงินระดับมืออาชีพ รองรับภาษาไทย 100% ออกแบบสถาปัตยกรรม **Multi-Tenant Workspace** สำหรับกลุ่มบริษัทในเครือ (Holding Group) พร้อมระบบสิทธิ์ผู้ใช้งาน 4 ระดับ, การบันทึกภาษีไทย (VAT 7% และหัก ณ ที่จ่าย WHT 1%, 2%, 3%, 5%), แดชบอร์ดวิเคราะห์เปรียบเทียบผลประกอบการ, การพิมพ์รายงานงบการเงินมาตรฐาน A4 และรองรับการเชื่อมต่อฐานข้อมูล **Supabase PostgreSQL & Storage** แบบ Realtime
+เว็บแอปพลิเคชัน SPA (Single-Page Application) สไตล์ Modern Minimal โทนสีกรมท่า-น้ำเงินระดับมืออาชีพ รองรับภาษาไทย 100% ออกแบบสถาปัตยกรรม **Multi-Tenant Workspace** สำหรับกลุ่มบริษัทในเครือ (Holding Group) พร้อมระบบสิทธิ์ผู้ใช้งาน 4 ระดับ, การบันทึกภาษีไทย (VAT 7% และหัก ณ ที่จ่าย WHT 1%, 2%, 3%, 5%), แดชบอร์ดวิเคราะห์เปรียบเทียบผลประกอบการ, การพิมพ์รายงานงบการเงินมาตรฐาน A4 และเชื่อมต่อฐานข้อมูลคลาวด์ **Firebase Cloud Firestore** และโฮสติ้งบน **Vercel** แบบ Realtime
 
 ---
 
@@ -37,11 +37,11 @@
 - **รายงานสรุปภาษีซื้อ-ภาษีขาย (ภ.พ. 30 / ภ.ง.ด. 3/53):** สรุปยอดภาษีขาย ภาษีซื้อ และภาษีที่ต้องชำระ/ขอคืน พร้อม**บล็อกลายเซ็นผู้จัดทำบัญชี, ผู้ตรวจสอบบัญชี (CPA) และกรรมการผู้มีอำนาจลงนาม**
 - **ส่งออกไฟล์ CSV/Excel:** รองรับ UTF-8 ภาษาไทย 100% เปิดใน Microsoft Excel ได้ไม่เพี้ยน
 
-### 4. การเชื่อมต่อ Supabase Database & Realtime Storage
-- มีไฟล์ `supabase_schema.sql` พร้อมใช้งาน ประกอบด้วย:
-  - การสร้างตาราง `companies`, `profiles`, `categories`, `transactions`, `attachments`, `audit_logs`
-  - การตั้งค่า **Row Level Security (RLS)** แยกสิทธิ์ตาม Company ID และ User Role
-  - มีหน้าจอ **Settings** ให้กรอก Supabase Project URL และ Anon Key เพื่อเริ่มบันทึกข้อมูลขึ้น Cloud ได้ทันที
+### 4. การเชื่อมต่อ Firebase Cloud Firestore
+- เชื่อมต่อ **Firebase Firestore Database** (Project: `companyhub-ca1b0`)
+- ซิงค์ข้อมูลบริษัท ผู้ใช้ และธุรกรรมแบบ 2-Way Realtime ถาวรข้ามอุปกรณ์
+- ข้อมูลอัปเดตตรงถึงคลาวด์ทันทีที่มีการเปลี่ยนแปลง
+- รองรับการแก้ไขและจัดการหลายลิงก์สำหรับแต่ละบริษัท (ระบบหน้าบ้าน, หลังบ้าน, ระบบย่อย)
 
 ---
 
@@ -80,7 +80,7 @@ python3 server.py
 ├── app.js                # Core Logic, Multi-Tenant Workspace, RBAC, Tax Engine, CSV Export
 ├── mock_data.js          # ข้อมูลจำลองภาษาไทย 3 บริษัท, ผังบัญชี, และธุรกรรม VAT/WHT
 ├── print.css             # สไตล์ชีตการพิมพ์รายงาน A4 มาตรฐานบัญชีไทย พร้อมบล็อกลายเซ็น
-├── supabase_schema.sql   # สคริปต์ SQL สำหรับสร้างฐานข้อมูล Supabase PostgreSQL & RLS
 ├── server.py             # Development Web Server แบบน้ำหนักเบา
+├── vercel.json           # การตั้งค่า Vercel Routing & Deployment
 └── README.md             # คู่มือการใช้งานระบบ
 ```
