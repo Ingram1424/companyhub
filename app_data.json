@@ -46,7 +46,7 @@
       "name_th": "เพิ่มพูน",
       "name_en": "เพิ่มพูน",
       "category": "ธุรกิจ & บริการ",
-      "website_url": "https://permpoonproject.up.railway.app",
+      "website_url": "https://aironchainwebsite.vercel.app",
       "logo_image": "logos/permpoon.png",
       "logo_emoji": "🏢",
       "description": "ระบบงานและเว็บไซต์สำหรับองค์กร",
@@ -57,7 +57,14 @@
       "phone": "-",
       "email": "-",
       "invite_code": "INV-PERMPOON",
-      "sub_links": [],
+      "sub_links": [
+        {
+          "id": "sub_1792568872407",
+          "title": "เว็บโปรเจค",
+          "url": "https://permpoonproject.up.railway.app",
+          "badge": "ระบบ"
+        }
+      ],
       "created_at": "2026-10-14T03:00:00Z"
     },
     {

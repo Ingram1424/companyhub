@@ -623,7 +623,10 @@ class AccountingApp {
             const isLocked = userRestrictedCompId && !isUserHome;
             const canEdit = this.hasPermission("manage_settings") || (this.currentUser && this.currentUser.company_id === c.id && this.currentUser.role === "company_manager");
             const links = this.getCompanyLinks(c);
-            const primaryLink = links[0] || { title: "เว็บหน้าบ้าน", url: c.website_url || "" };
+            const primaryLink = links[0] || { title: "เว็บไซต์หลัก", url: c.website_url || "" };
+            const subLinks = links.slice(1);
+            const primaryClean = (primaryLink.url || "").replace(/^https?:\/\//, '').replace(/\/$/, '');
+            const primaryTarget = (primaryLink.url && /^https?:\/\//i.test(primaryLink.url)) ? primaryLink.url : `https://${primaryLink.url || ''}`;
 
             return `
                 <div class="bg-white rounded-2xl sm:rounded-3xl border ${isUserHome ? 'border-blue-500 ring-2 ring-blue-500/10' : 'border-slate-200/80'} p-4 sm:p-6 flex flex-col justify-between hover:shadow-lg hover:border-slate-300 transition duration-200 group ${isLocked ? 'opacity-50 grayscale' : ''}">
@@ -654,63 +657,96 @@ class AccountingApp {
                             <p class="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">${c.description || 'เว็บไซต์และระบบงานสำหรับบริหารจัดการองค์กร'}</p>
                         </div>
 
-                        <!-- Website Links List (เว็บหน้าบ้าน / หลังบ้าน / ระบบงาน) -->
-                        <div class="mt-3.5 sm:mt-4 space-y-2">
-                            <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                                <span class="flex items-center gap-1.5">
-                                    <i data-lucide="globe" class="w-3.5 h-3.5 text-blue-600"></i>
-                                    <span>ลิงก์ระบบงาน & เว็บไซต์ (${links.length})</span>
+                        <!-- Primary Website Box -->
+                        <div class="mt-3.5 sm:mt-4 p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-2.5 hover:border-slate-200 transition">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="globe" class="w-4 h-4"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="text-[10px] text-slate-400 block font-semibold leading-tight">${primaryLink.title || 'เว็บไซต์หลัก'}</span>
+                                    ${primaryLink.url ? `
+                                        <a href="${primaryTarget}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-medium text-blue-600 hover:underline truncate block mt-0.5" title="${primaryLink.url}">
+                                            ${primaryClean}
+                                        </a>
+                                    ` : `
+                                        <span class="text-xs text-slate-400 font-mono mt-0.5 block">ยังไม่ได้ระบุลิงก์</span>
+                                    `}
+                                </div>
+                            </div>
+                            ${primaryLink.url ? `
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button onclick="app.copyCompanyUrl('${primaryTarget}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition active:scale-90">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Sub-systems & Additional Links Section -->
+                        <div class="mt-3 sm:mt-3.5">
+                            <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1.5">
+                                <span class="flex items-center gap-1">
+                                    <span>ระบบงานย่อย (${subLinks.length})</span>
                                 </span>
-                                <span class="text-[10px] text-slate-400 font-normal">คลิกเปิดหรือคัดลอกได้</span>
+                                <span class="text-[10px] text-slate-400 font-normal">คลิกเพื่อเปิด</span>
                             </div>
 
-                            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
-                                ${links.map((link, idx) => {
-                                    const linkClean = (link.url || "").replace(/^https?:\/\//, '').replace(/\/$/, '');
-                                    const target = (link.url && /^https?:\/\//i.test(link.url)) ? link.url : `https://${link.url || ''}`;
-                                    const isBackoffice = /หลังบ้าน|admin|แอดมิน|จัดการ|สต็อก|internal|บัญชี/i.test(link.title);
-                                    const badgeClass = isBackoffice 
-                                        ? 'bg-amber-50 text-amber-800 border-amber-200' 
-                                        : 'bg-blue-50 text-blue-700 border-blue-200';
+                            ${subLinks.length === 0 ? `
+                                <p class="text-xs text-slate-400 py-1 font-normal">ยังไม่มีระบบงานย่อย</p>
+                            ` : `
+                                <div class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                                    ${subLinks.map(s => {
+                                        const cleanUrl = (s.url || "").replace(/^https?:\/\//, '').replace(/\/$/, '');
+                                        const target = (s.url && /^https?:\/\//i.test(s.url)) ? s.url : `https://${s.url || ''}`;
+                                        const isBackoffice = /หลังบ้าน|admin|แอดมิน|จัดการ|สต็อก|internal|บัญชี/i.test(s.title);
+                                        const badgeText = s.badge || (isBackoffice ? 'หลังบ้าน' : 'ระบบ');
+                                        const badgeClass = isBackoffice 
+                                            ? 'bg-amber-100/80 text-amber-800 border-amber-200' 
+                                            : 'bg-slate-200/70 text-slate-700 border-slate-300/60';
 
-                                    return `
-                                        <div class="p-2 sm:p-2.5 bg-slate-50/90 hover:bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 transition flex items-center justify-between gap-2 group/link shadow-2xs">
-                                            <div class="flex items-center gap-2 min-w-0">
-                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${badgeClass} border flex-shrink-0">
-                                                    ${link.title || `ลิงก์ ${idx + 1}`}
-                                                </span>
-                                                <a href="${target}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-medium text-slate-700 hover:text-blue-600 truncate block transition" title="${link.url}">
-                                                    ${linkClean || 'ไม่ได้ระบุ URL'}
-                                                </a>
+                                        return `
+                                            <div class="p-2 sm:p-2.5 bg-slate-50 hover:bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 transition flex items-center justify-between gap-2 group/sub shadow-2xs">
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                                        <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${badgeClass} border flex-shrink-0">
+                                                            ${badgeText}
+                                                        </span>
+                                                        <span class="text-xs font-bold text-slate-800 truncate">${s.title}</span>
+                                                    </div>
+                                                    <a href="${target}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-medium text-blue-600 hover:underline truncate block" title="${s.url}">
+                                                        ${cleanUrl || 'ไม่ได้ระบุ URL'}
+                                                    </a>
+                                                </div>
+                                                <div class="flex items-center gap-1 flex-shrink-0">
+                                                    <button onclick="app.copyCompanyUrl('${target}')" title="คัดลอกลิงก์" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition active:scale-90">
+                                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                    <a href="${target}" target="_blank" rel="noopener noreferrer" title="เปิดในแท็บใหม่" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition active:scale-90">
+                                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                                    </a>
+                                                </div>
                                             </div>
-                                            <div class="flex items-center gap-1 flex-shrink-0">
-                                                <button onclick="app.copyCompanyUrl('${target}')" title="คัดลอกลิงก์" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition active:scale-90">
-                                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                                </button>
-                                                <a href="${target}" target="_blank" rel="noopener noreferrer" title="เปิดในแท็บใหม่" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition active:scale-90">
-                                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            `}
                         </div>
                     </div>
 
                     <!-- Card Actions -->
                     <div class="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-100 flex flex-col gap-2.5">
                         ${links.length <= 1 ? `
-                            <a href="${(links[0]?.url && /^https?:\/\//i.test(links[0].url)) ? links[0].url : 'https://' + (links[0]?.url || '')}" target="_blank" rel="noopener noreferrer" 
+                            <a href="${primaryTarget}" target="_blank" rel="noopener noreferrer" 
                                 class="w-full py-3 px-4 bg-navy-900 hover:bg-slate-800 active:scale-[0.98] text-white text-sm font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
                                 <span>เปิดระบบ</span>
                                 <i data-lucide="external-link" class="w-4 h-4"></i>
                             </a>
                         ` : links.length === 2 ? `
                             <div class="grid grid-cols-2 gap-2">
-                                <a href="${(links[0]?.url && /^https?:\/\//i.test(links[0].url)) ? links[0].url : 'https://' + (links[0]?.url || '')}" target="_blank" rel="noopener noreferrer" 
-                                    class="py-2.5 px-3 bg-navy-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 truncate" title="เปิด ${links[0].title}">
-                                    <span class="truncate">เปิด${links[0].title}</span>
+                                <a href="${primaryTarget}" target="_blank" rel="noopener noreferrer" 
+                                    class="py-2.5 px-3 bg-navy-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 truncate" title="เปิด ${primaryLink.title}">
+                                    <span class="truncate">เปิด${primaryLink.title}</span>
                                     <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
                                 </a>
                                 <a href="${(links[1]?.url && /^https?:\/\//i.test(links[1].url)) ? links[1].url : 'https://' + (links[1]?.url || '')}" target="_blank" rel="noopener noreferrer" 
@@ -2327,7 +2363,7 @@ class AccountingApp {
         if (comp.website_url) {
             links.push({
                 id: "link_main",
-                title: "เว็บหน้าบ้าน",
+                title: "เว็บไซต์หลัก",
                 url: comp.website_url
             });
         }
@@ -2336,13 +2372,14 @@ class AccountingApp {
                 if (s && (s.url || s.title)) {
                     links.push({
                         id: s.id || `sub_${idx}`,
-                        title: s.title || (s.badge ? `เว็บ${s.badge}` : `ลิงก์ที่ ${idx + 2}`),
-                        url: s.url || ""
+                        title: s.title || (s.badge ? `เว็บ${s.badge}` : `ระบบงานย่อย ${idx + 1}`),
+                        url: s.url || "",
+                        badge: s.badge || (/หลังบ้าน|admin|แอดมิน|จัดการ|สต็อก/i.test(s.title || '') ? "หลังบ้าน" : "ระบบ")
                     });
                 }
             });
         }
-        return links.length > 0 ? links : [{ id: "link_1", title: "เว็บหน้าบ้าน", url: "" }];
+        return links.length > 0 ? links : [{ id: "link_1", title: "เว็บไซต์หลัก", url: "" }];
     }
 
     renderEditingLinksRows(containerId = "edit-links-container") {
