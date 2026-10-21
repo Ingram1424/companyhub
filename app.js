@@ -3,6 +3,9 @@
  * Ultra-Clean Professional Redesign & Enterprise Financial Engine
  */
 
+const DEFAULT_SUPABASE_URL = "https://txglgkovojxvazbqxaac.supabase.co";
+const DEFAULT_SUPABASE_KEY = "sb_publishable_XYSvmVEwASmhS9RpJMuz9Q_EbCZ8JJe";
+
 class AccountingApp {
     constructor() {
         this.initStorage();
@@ -13,6 +16,7 @@ class AccountingApp {
         this.parseUrlParams();
         this.bindGlobalEvents();
         this.render();
+        this.syncWithSupabase();
         this.syncWithServer();
     }
 
@@ -118,27 +122,83 @@ class AccountingApp {
         }
         localStorage.setItem("mc_supabase_cfg", JSON.stringify(this.supabaseCfg));
 
-        if (syncServer && (window.location.protocol === "http:" || window.location.protocol === "https:")) {
-            fetch("/api/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    companies: this.companies,
-                    users: this.users
-                })
-            }).catch(() => {});
+        if (syncServer) {
+            // 1. Direct Cloud Sync to Supabase
+            if (this.supabaseClient) {
+                this.supabaseClient.from('projects').upsert({
+                    code: 'companyhub_data',
+                    data: {
+                        companies: this.companies,
+                        users: this.users,
+                        transactions: this.transactions,
+                        categories: this.categories
+                    },
+                    updated_at: new Date().toISOString()
+                }).then(({ error }) => {
+                    if (error) console.warn("Supabase upsert warning:", error);
+                }).catch(err => console.warn("Supabase upsert error:", err));
+            }
+
+            // 2. Server API Sync (when running locally or on server)
+            if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+                fetch("/api/save", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        companies: this.companies,
+                        users: this.users
+                    })
+                }).catch(() => {});
+            }
         }
     }
 
     // 2. Supabase Integration Layer
     initSupabaseClient() {
-        if (this.supabaseCfg.enabled && this.supabaseCfg.url && this.supabaseCfg.key && window.supabase) {
+        const url = (this.supabaseCfg && this.supabaseCfg.enabled && this.supabaseCfg.url) ? this.supabaseCfg.url : DEFAULT_SUPABASE_URL;
+        const key = (this.supabaseCfg && this.supabaseCfg.enabled && this.supabaseCfg.key) ? this.supabaseCfg.key : DEFAULT_SUPABASE_KEY;
+        if (window.supabase) {
             try {
-                this.supabaseClient = window.supabase.createClient(this.supabaseCfg.url, this.supabaseCfg.key);
+                this.supabaseClient = window.supabase.createClient(url, key);
             } catch (err) {
                 console.warn("Supabase init warning:", err);
             }
         }
+    }
+
+    async syncWithSupabase() {
+        if (!this.supabaseClient) return false;
+        try {
+            const { data, error } = await this.supabaseClient
+                .from('projects')
+                .select('data')
+                .eq('code', 'companyhub_data')
+                .single();
+            if (!error && data && data.data) {
+                const cloud = data.data;
+                let updated = false;
+                if (Array.isArray(cloud.companies) && cloud.companies.length > 0) {
+                    this.companies = cloud.companies;
+                    updated = true;
+                }
+                if (Array.isArray(cloud.users) && cloud.users.length > 0) {
+                    this.users = cloud.users;
+                    updated = true;
+                }
+                if (Array.isArray(cloud.transactions) && cloud.transactions.length > 0) {
+                    this.transactions = cloud.transactions;
+                    updated = true;
+                }
+                if (updated) {
+                    this.saveLocalData(false);
+                    this.render();
+                }
+                return true;
+            }
+        } catch (e) {
+            console.warn("Supabase sync warning:", e);
+        }
+        return false;
     }
 
     async testSupabaseConnection() {
@@ -147,11 +207,11 @@ class AccountingApp {
             return;
         }
         try {
-            const { data, error } = await this.supabaseClient.from("companies").select("count");
-            if (error && error.code !== "PGRST116") {
+            const { data, error } = await this.supabaseClient.from("projects").select("code").limit(1);
+            if (error) {
                 this.showToast(`การเชื่อมต่อมีปัญหา: ${error.message}`, "error");
             } else {
-                this.showToast("🟢 เชื่อมต่อกับ Supabase PostgreSQL สำเร็จ!", "success");
+                this.showToast("🟢 เชื่อมต่อกับ Supabase Cloud สำเร็จ!", "success");
             }
         } catch (err) {
             this.showToast(`ไม่สามารถเชื่อมต่อได้: ${err.message}`, "error");
@@ -163,22 +223,19 @@ class AccountingApp {
             this.showToast("ไม่ได้เปิดใช้งาน Supabase", "error");
             return;
         }
-        this.showToast("กำลังส่งข้อมูลขึ้น Supabase...", "info");
+        this.showToast("กำลังส่งข้อมูลขึ้น Supabase Cloud...", "info");
         try {
-            // Upsert companies
-            const compsToSync = this.companies.map(c => ({
-                id: c.id.startsWith("comp_") ? undefined : c.id,
-                code: c.code,
-                name_th: c.name_th,
-                name_en: c.name_en,
-                tax_id: c.tax_id,
-                branch_code: c.branch_code,
-                address: c.address,
-                invite_code: c.invite_code
-            }));
-            const { error: compErr } = await this.supabaseClient.from("companies").upsert(compsToSync, { onConflict: "code" });
-            if (compErr) throw compErr;
-
+            const { error } = await this.supabaseClient.from('projects').upsert({
+                code: 'companyhub_data',
+                data: {
+                    companies: this.companies,
+                    users: this.users,
+                    transactions: this.transactions,
+                    categories: this.categories
+                },
+                updated_at: new Date().toISOString()
+            });
+            if (error) throw error;
             this.showToast("✅ ซิงค์ข้อมูลเข้า Supabase Cloud เรียบร้อยแล้ว", "success");
         } catch (err) {
             this.showToast(`เกิดข้อผิดพลาดในการซิงค์: ${err.message}`, "error");
