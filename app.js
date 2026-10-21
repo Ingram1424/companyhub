@@ -3,6 +3,15 @@
  * Ultra-Clean Professional Redesign & Enterprise Financial Engine
  */
 
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBvATwBLcNoQ-a6kP_Unkt-FMmjjX6yt8M",
+  authDomain: "companyhub-ca1b0.firebaseapp.com",
+  projectId: "companyhub-ca1b0",
+  storageBucket: "companyhub-ca1b0.firebasestorage.app",
+  messagingSenderId: "1001866724047",
+  appId: "1:1001866724047:web:7790d58131a6ca5eefadba"
+};
+
 class AccountingApp {
     constructor() {
         this.initStorage();
@@ -147,7 +156,7 @@ class AccountingApp {
     // 2. Firebase Cloud Firestore Integration Layer
     initFirebase() {
         const storedFb = localStorage.getItem("mc_firebase_cfg");
-        this.firebaseCfg = storedFb ? JSON.parse(storedFb) : null;
+        this.firebaseCfg = storedFb ? JSON.parse(storedFb) : DEFAULT_FIREBASE_CONFIG;
 
         if (window.firebase && this.firebaseCfg && this.firebaseCfg.projectId) {
             try {
