@@ -712,16 +712,53 @@ class AccountingApp {
             `;
         }
 
-        // Update category filter buttons style
-        const catFilterBtns = document.querySelectorAll("#portal-category-filters .cat-filter-btn");
-        catFilterBtns.forEach(btn => {
-            const cat = btn.getAttribute("data-cat");
-            if (cat === this.selectedCategory) {
-                btn.className = "cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-navy-900 text-white transition shadow-xs";
-            } else {
-                btn.className = "cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition";
+        // Render Category Filter Tabs dynamically
+        const catFilterContainer = document.getElementById("portal-category-filters");
+        if (catFilterContainer) {
+            const categories = [];
+            this.companies.forEach(c => {
+                const cat = (c.category || "").trim();
+                if (cat && !categories.includes(cat)) {
+                    categories.push(cat);
+                }
+            });
+
+            const isAllSelected = !this.selectedCategory || this.selectedCategory === "all";
+            const canManage = this.hasPermission("manage_companies") || this.hasPermission("manage_settings");
+
+            let html = `
+                <button onclick="app.filterCategory('all')" 
+                        class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition shadow-xs ${isAllSelected ? 'bg-navy-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}" 
+                        data-cat="all">
+                    ทั้งหมด
+                </button>
+            `;
+
+            categories.forEach(cat => {
+                const isSelected = this.selectedCategory === cat;
+                const count = this.companies.filter(c => (c.category || "").trim() === cat).length;
+                const escapedCat = cat.replace(/'/g, "\\'");
+                html += `
+                    <button onclick="app.filterCategory('${escapedCat}')" 
+                            class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition shadow-xs flex items-center gap-1.5 ${isSelected ? 'bg-navy-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}" 
+                            data-cat="${cat.replace(/"/g, '&quot;')}">
+                        <span>${cat}</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}">${count}</span>
+                    </button>
+                `;
+            });
+
+            if (canManage) {
+                html += `
+                    <button onclick="app.openAddTabModal()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-dashed border-blue-300 transition whitespace-nowrap flex-shrink-0 flex items-center gap-1 shadow-xs active:scale-95" title="เพิ่มแท็บ/หมวดหมู่ใหม่">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>+ เพิ่มแท็บ</span>
+                    </button>
+                `;
             }
-        });
+
+            catFilterContainer.innerHTML = html;
+        }
 
         const grid = document.getElementById("portal-companies-grid");
         const countBadge = document.getElementById("companies-count-badge");
@@ -981,6 +1018,109 @@ class AccountingApp {
         this.selectedCategory = cat;
         this.renderPortalScreen();
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    openAddTabModal() {
+        const modal = document.getElementById("modal-container");
+        const modalContent = document.getElementById("modal-content");
+        if (!modal || !modalContent) return;
+
+        // Existing categories
+        const existingCats = [];
+        this.companies.forEach(c => {
+            const cat = (c.category || "").trim();
+            if (cat && !existingCats.includes(cat)) existingCats.push(cat);
+        });
+
+        modalContent.innerHTML = `
+            <div class="p-6 sm:p-8">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                            📑
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">เพิ่มแท็บ / หมวดหมู่ใหม่</h2>
+                            <p class="text-xs text-slate-400">สร้างแท็บสำหรับจัดกลุ่มและกรองบริษัทข้างๆ ปุ่ม "ทั้งหมด"</p>
+                        </div>
+                    </div>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <form onsubmit="app.handleCreateTab(event)" class="mt-5 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">ชื่อแท็บใหม่ (Category Name) *</label>
+                        <input type="text" id="new-tab-name" placeholder="เช่น ระบบงานภายใน, เว็บไซต์ลูกค้า, แดชบอร์ด" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600" required />
+                        ${existingCats.length > 0 ? `
+                            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                <span class="text-[11px] text-slate-400">แท็บเดิมที่มีอยู่:</span>
+                                ${existingCats.map(cat => `
+                                    <button type="button" onclick="document.getElementById('new-tab-name').value='${cat.replace(/'/g, "\\'")}'" class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                                        ${cat}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">เลือกบริษัทที่ต้องการให้อยู่ในแท็บนี้:</label>
+                        <p class="text-[11px] text-slate-400 mb-2.5">ติ๊กเลือกบริษัทที่ต้องการให้แสดงเมื่อคลิกแท็บนี้</p>
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            ${this.companies.map(c => `
+                                <label class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
+                                            ${c.logo_image ? `<img src="${c.logo_image}" class="w-full h-full object-cover" />` : (c.logo_emoji || '🏢')}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-bold text-slate-800 truncate">${c.name_th}</div>
+                                            <div class="text-[10px] text-slate-400 truncate">หมวดหมู่ปัจจุบัน: ${c.category || 'ไม่มี'}</div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" name="selected_tab_companies" value="${c.id}" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 ml-2" />
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                        <button type="button" onclick="app.closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">ยกเลิก</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl transition shadow-sm">+ บันทึกสร้างแท็บ</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+        modal.classList.remove("hidden");
+    }
+
+    handleCreateTab(e) {
+        e.preventDefault();
+        const tabName = (document.getElementById("new-tab-name").value || "").trim();
+        if (!tabName) return;
+
+        const checkboxes = document.querySelectorAll("input[name='selected_tab_companies']:checked");
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedIds.length === 0) {
+            this.showToast("กรุณาเลือกอย่างน้อย 1 บริษัทเพื่อจัดเข้าแท็บนี้", "error");
+            return;
+        }
+
+        this.companies = this.companies.map(c => {
+            if (selectedIds.includes(c.id)) {
+                return { ...c, category: tabName };
+            }
+            return c;
+        });
+
+        this.selectedCategory = tabName;
+        this.saveLocalData(true);
+        this.closeModal();
+        this.renderPortalScreen();
+        if (window.lucide) window.lucide.createIcons();
+        this.showToast(`สร้างแท็บ "${tabName}" เรียบร้อยแล้ว`, "success");
     }
 
     handlePortalSearch(val) {
