@@ -135,6 +135,12 @@ class AccountingApp {
                     users: this.users,
                     transactions: this.transactions,
                     categories: this.categories,
+                    json_data: JSON.stringify({
+                        companies: this.companies,
+                        users: this.users,
+                        transactions: this.transactions,
+                        categories: this.categories
+                    }),
                     updated_at: new Date().toISOString()
                 }, { merge: true }).catch(err => console.warn("Firebase save error:", err));
             }
@@ -178,24 +184,32 @@ class AccountingApp {
             const docSnap = await docRef.get();
             if (docSnap.exists) {
                 const cloud = docSnap.data();
+                let data = cloud;
+                if (cloud.json_data) {
+                    try {
+                        data = typeof cloud.json_data === "string" ? JSON.parse(cloud.json_data) : cloud.json_data;
+                    } catch (pe) {
+                        data = cloud;
+                    }
+                }
+
                 let updated = false;
-                if (Array.isArray(cloud.companies) && cloud.companies.length > 0) {
-                    this.companies = cloud.companies;
+                if (Array.isArray(data.companies) && data.companies.length > 0) {
+                    this.companies = data.companies;
                     updated = true;
                 }
-                if (Array.isArray(cloud.users) && cloud.users.length > 0) {
-                    this.users = cloud.users;
+                if (Array.isArray(data.users) && data.users.length > 0) {
+                    this.users = data.users;
                     updated = true;
                 }
-                if (Array.isArray(cloud.transactions) && cloud.transactions.length > 0) {
-                    this.transactions = cloud.transactions;
+                if (Array.isArray(data.transactions) && data.transactions.length > 0) {
+                    this.transactions = data.transactions;
                     updated = true;
                 }
                 if (updated) {
                     this.saveLocalData(false);
                     this.render();
                 }
-                return true;
             } else {
                 // First time: seed Firebase with current 5 companies
                 await docRef.set({
@@ -203,10 +217,47 @@ class AccountingApp {
                     users: this.users,
                     transactions: this.transactions,
                     categories: this.categories,
+                    json_data: JSON.stringify({
+                        companies: this.companies,
+                        users: this.users,
+                        transactions: this.transactions,
+                        categories: this.categories
+                    }),
                     updated_at: new Date().toISOString()
                 });
-                return true;
             }
+
+            // Real-time synchronization listener
+            docRef.onSnapshot((snapshot) => {
+                if (!snapshot || !snapshot.exists) return;
+                const cloudData = snapshot.data();
+                let parsed = cloudData;
+                if (cloudData.json_data) {
+                    try {
+                        parsed = typeof cloudData.json_data === "string" ? JSON.parse(cloudData.json_data) : cloudData.json_data;
+                    } catch (e) {
+                        parsed = cloudData;
+                    }
+                }
+                if (Array.isArray(parsed.companies) && parsed.companies.length > 0) {
+                    const curr = JSON.stringify(this.companies);
+                    const next = JSON.stringify(parsed.companies);
+                    if (curr !== next) {
+                        this.companies = parsed.companies;
+                        if (Array.isArray(parsed.users) && parsed.users.length > 0) this.users = parsed.users;
+                        if (Array.isArray(parsed.transactions)) this.transactions = parsed.transactions;
+                        this.saveLocalData(false);
+                        const modal = document.getElementById("modal-container");
+                        if (!modal || modal.classList.contains("hidden")) {
+                            this.render();
+                        }
+                    }
+                }
+            }, (err) => {
+                console.warn("Firestore real-time listener warning:", err);
+            });
+
+            return true;
         } catch (e) {
             console.warn("Firebase sync warning:", e);
         }
