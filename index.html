@@ -49,8 +49,9 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Supabase JS Client CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Firebase JS SDK (App & Cloud Firestore) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <!-- Print Stylesheet -->
     <link rel="stylesheet" href="print.css">
@@ -367,8 +368,8 @@
                     </button>
 
                     <button onclick="app.switchTab('settings')" class="menu-superadmin-only nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition text-slate-600 hover:bg-slate-100 hover:text-slate-900" data-tab="settings">
-                        <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
-                        <span>Supabase Database</span>
+                        <i data-lucide="flame" class="w-4 h-4 text-amber-500"></i>
+                        <span>ฐานข้อมูล Firebase</span>
                     </button>
                 </nav>
             </div>

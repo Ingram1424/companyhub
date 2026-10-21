@@ -3,20 +3,17 @@
  * Ultra-Clean Professional Redesign & Enterprise Financial Engine
  */
 
-const DEFAULT_SUPABASE_URL = "https://txglgkovojxvazbqxaac.supabase.co";
-const DEFAULT_SUPABASE_KEY = "sb_publishable_XYSvmVEwASmhS9RpJMuz9Q_EbCZ8JJe";
-
 class AccountingApp {
     constructor() {
         this.initStorage();
         this.portalSearchQuery = "";
         this.charts = {};
-        this.supabaseClient = null;
-        this.initSupabaseClient();
+        this.db = null;
+        this.initFirebase();
         this.parseUrlParams();
         this.bindGlobalEvents();
         this.render();
-        this.syncWithSupabase();
+        this.syncWithFirebase();
         this.syncWithServer();
     }
 
@@ -41,7 +38,7 @@ class AccountingApp {
         const storedSessionUser = sessionStorage.getItem("mc_current_user");
         const storedCurrentUser = storedLocalUser || storedSessionUser;
         this.rememberLogin = !!storedLocalUser;
-        const storedSupabase = localStorage.getItem("mc_supabase_cfg");
+        const storedFirebase = localStorage.getItem("mc_firebase_cfg");
 
         const parsedCompanies = storedCompanies ? JSON.parse(storedCompanies) : null;
         this.companies = (parsedCompanies && parsedCompanies.length > 0) 
@@ -51,7 +48,7 @@ class AccountingApp {
         this.transactions = storedTransactions ? JSON.parse(storedTransactions) : [...INITIAL_MOCK_DATA.transactions];
         this.categories = [...INITIAL_MOCK_DATA.categories];
         this.users = storedUsers ? JSON.parse(storedUsers) : [...INITIAL_MOCK_DATA.users];
-        this.supabaseCfg = storedSupabase ? JSON.parse(storedSupabase) : { url: "", key: "", enabled: false };
+        this.firebaseCfg = storedFirebase ? JSON.parse(storedFirebase) : null;
 
         // Authentication & Navigation state: require login if not currently authenticated
         this.currentUser = storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
@@ -120,26 +117,20 @@ class AccountingApp {
             localStorage.removeItem("mc_current_user");
             sessionStorage.removeItem("mc_current_user");
         }
-        localStorage.setItem("mc_supabase_cfg", JSON.stringify(this.supabaseCfg));
 
         if (syncServer) {
-            // 1. Direct Cloud Sync to Supabase
-            if (this.supabaseClient) {
-                this.supabaseClient.from('projects').upsert({
-                    code: 'companyhub_data',
-                    data: {
-                        companies: this.companies,
-                        users: this.users,
-                        transactions: this.transactions,
-                        categories: this.categories
-                    },
+            // 1. Direct Cloud Sync to Firebase Firestore
+            if (this.db) {
+                this.db.collection("companyhub").doc("app_data").set({
+                    companies: this.companies,
+                    users: this.users,
+                    transactions: this.transactions,
+                    categories: this.categories,
                     updated_at: new Date().toISOString()
-                }).then(({ error }) => {
-                    if (error) console.warn("Supabase upsert warning:", error);
-                }).catch(err => console.warn("Supabase upsert error:", err));
+                }, { merge: true }).catch(err => console.warn("Firebase save error:", err));
             }
 
-            // 2. Server API Sync (when running locally or on server)
+            // 2. Local Python server API Sync (if available)
             if (window.location.protocol === "http:" || window.location.protocol === "https:") {
                 fetch("/api/save", {
                     method: "POST",
@@ -153,29 +144,31 @@ class AccountingApp {
         }
     }
 
-    // 2. Supabase Integration Layer
-    initSupabaseClient() {
-        const url = (this.supabaseCfg && this.supabaseCfg.enabled && this.supabaseCfg.url) ? this.supabaseCfg.url : DEFAULT_SUPABASE_URL;
-        const key = (this.supabaseCfg && this.supabaseCfg.enabled && this.supabaseCfg.key) ? this.supabaseCfg.key : DEFAULT_SUPABASE_KEY;
-        if (window.supabase) {
+    // 2. Firebase Cloud Firestore Integration Layer
+    initFirebase() {
+        const storedFb = localStorage.getItem("mc_firebase_cfg");
+        this.firebaseCfg = storedFb ? JSON.parse(storedFb) : null;
+
+        if (window.firebase && this.firebaseCfg && this.firebaseCfg.projectId) {
             try {
-                this.supabaseClient = window.supabase.createClient(url, key);
+                if (!window.firebase.apps.length) {
+                    window.firebase.initializeApp(this.firebaseCfg);
+                }
+                this.db = window.firebase.firestore();
+                console.log("🔥 Firebase Firestore connected successfully!");
             } catch (err) {
-                console.warn("Supabase init warning:", err);
+                console.warn("Firebase init warning:", err);
             }
         }
     }
 
-    async syncWithSupabase() {
-        if (!this.supabaseClient) return false;
+    async syncWithFirebase() {
+        if (!this.db) return false;
         try {
-            const { data, error } = await this.supabaseClient
-                .from('projects')
-                .select('data')
-                .eq('code', 'companyhub_data')
-                .single();
-            if (!error && data && data.data) {
-                const cloud = data.data;
+            const docRef = this.db.collection("companyhub").doc("app_data");
+            const docSnap = await docRef.get();
+            if (docSnap.exists) {
+                const cloud = docSnap.data();
                 let updated = false;
                 if (Array.isArray(cloud.companies) && cloud.companies.length > 0) {
                     this.companies = cloud.companies;
@@ -194,51 +187,110 @@ class AccountingApp {
                     this.render();
                 }
                 return true;
+            } else {
+                // First time: seed Firebase with current 5 companies
+                await docRef.set({
+                    companies: this.companies,
+                    users: this.users,
+                    transactions: this.transactions,
+                    categories: this.categories,
+                    updated_at: new Date().toISOString()
+                });
+                return true;
             }
         } catch (e) {
-            console.warn("Supabase sync warning:", e);
+            console.warn("Firebase sync warning:", e);
         }
         return false;
     }
 
-    async testSupabaseConnection() {
-        if (!this.supabaseClient) {
-            this.showToast("กรุณากรอก URL และ API Key พร้อมกดเปิดใช้งานก่อน", "error");
-            return;
-        }
-        try {
-            const { data, error } = await this.supabaseClient.from("projects").select("code").limit(1);
-            if (error) {
-                this.showToast(`การเชื่อมต่อมีปัญหา: ${error.message}`, "error");
-            } else {
-                this.showToast("🟢 เชื่อมต่อกับ Supabase Cloud สำเร็จ!", "success");
-            }
-        } catch (err) {
-            this.showToast(`ไม่สามารถเชื่อมต่อได้: ${err.message}`, "error");
-        }
+    openFirebaseModal() {
+        const modal = document.getElementById("modal-container");
+        const modalContent = document.getElementById("modal-content");
+        if (!modal || !modalContent) return;
+
+        const currentCfg = this.firebaseCfg ? JSON.stringify(this.firebaseCfg, null, 2) : "";
+
+        modalContent.innerHTML = `
+            <div class="p-6 sm:p-8">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                            🔥
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">ตั้งค่าฐานข้อมูล Firebase Cloud</h2>
+                            <p class="text-xs text-slate-400">เชื่อมต่อ Firebase Firestore เพื่อซิงค์ข้อมูลถาวรข้ามอุปกรณ์</p>
+                        </div>
+                    </div>
+                    <button onclick="app.closeModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <div class="mt-5 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">วางโค้ด Firebase Config (จาก Firebase Console):</label>
+                        <textarea id="firebase-cfg-input" rows="8" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "my-project.firebaseapp.com",
+  projectId: "my-project",
+  storageBucket: "my-project.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};' class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">${currentCfg}</textarea>
+                        <p class="text-[11px] text-slate-400 mt-1">สามารถก๊อปปี้ทั้งบล็อกหรือเฉพาะ JSON จาก Firebase Project Settings มาวางได้เลย</p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full ${this.db ? 'bg-emerald-500' : 'bg-slate-300'}"></span>
+                            <span>สถานะ: ${this.db ? 'เชื่อมต่อ Firebase แล้ว' : 'ยังไม่ได้เชื่อมต่อ'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="app.closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">ยกเลิก</button>
+                            <button type="button" onclick="app.saveFirebaseConfig()" class="px-5 py-2 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-xs transition active:scale-95">บันทึกและเชื่อมต่อ</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove("hidden");
+        if (window.lucide) window.lucide.createIcons();
     }
 
-    async syncToSupabase() {
-        if (!this.supabaseClient) {
-            this.showToast("ไม่ได้เปิดใช้งาน Supabase", "error");
+    saveFirebaseConfig() {
+        const input = document.getElementById("firebase-cfg-input")?.value.trim();
+        if (!input) {
+            this.showToast("กรุณาระบุ Firebase Config", "error");
             return;
         }
-        this.showToast("กำลังส่งข้อมูลขึ้น Supabase Cloud...", "info");
+
         try {
-            const { error } = await this.supabaseClient.from('projects').upsert({
-                code: 'companyhub_data',
-                data: {
-                    companies: this.companies,
-                    users: this.users,
-                    transactions: this.transactions,
-                    categories: this.categories
-                },
-                updated_at: new Date().toISOString()
-            });
-            if (error) throw error;
-            this.showToast("✅ ซิงค์ข้อมูลเข้า Supabase Cloud เรียบร้อยแล้ว", "success");
-        } catch (err) {
-            this.showToast(`เกิดข้อผิดพลาดในการซิงค์: ${err.message}`, "error");
+            let cfg = null;
+            const match = input.match(/\{[\s\S]*\}/);
+            if (match) {
+                const jsonStr = match[0]
+                    .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+                    .replace(/'([^']*)'/g, '"$1"')
+                    .replace(/,\s*\}/g, '}');
+                cfg = JSON.parse(jsonStr);
+            } else {
+                cfg = JSON.parse(input);
+            }
+
+            if (!cfg || !cfg.projectId) {
+                throw new Error("ต้องมี projectId ใน config");
+            }
+
+            localStorage.setItem("mc_firebase_cfg", JSON.stringify(cfg));
+            this.firebaseCfg = cfg;
+            this.initFirebase();
+            this.closeModal();
+            this.showToast("🔥 เชื่อมต่อ Firebase สำเร็จ กำลังซิงค์ข้อมูล...", "success");
+            this.syncWithFirebase();
+            this.render();
+        } catch (e) {
+            alert("รูปแบบ Firebase Config ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง: " + e.message);
         }
     }
 
@@ -575,6 +627,11 @@ class AccountingApp {
                 </button>
 
                 ${isSuperAdmin ? `
+                    <button onclick="app.openFirebaseModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition shadow-xs active:scale-95" title="ตั้งค่าฐานข้อมูล Firebase">
+                        <span class="text-xs">🔥</span>
+                        <span class="hidden sm:inline">Firebase DB</span>
+                    </button>
+
                     <button onclick="app.openUserManagerModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs active:scale-95" title="จัดการผู้ใช้งาน (Gen User)">
                         <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
                         <span class="hidden sm:inline">จัดการผู้ใช้ (Gen User)</span>
@@ -2104,54 +2161,87 @@ class AccountingApp {
     }
 
     // =========================================================================
-    // SETTINGS VIEW (With Live Supabase Client Test & Sync)
+    // SETTINGS VIEW (Firebase Cloud Settings & Reset)
     // =========================================================================
     renderSettingsView() {
+        const isConnected = !!this.db;
+        const currentCfg = this.firebaseCfg ? JSON.stringify(this.firebaseCfg, null, 2) : "";
+
         return `
             <div class="space-y-6 max-w-3xl">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
                     <div>
-                        <h1 class="text-xl font-bold text-slate-900">การตั้งค่าฐานข้อมูล Supabase</h1>
-                        <p class="text-xs text-slate-500 mt-1">กำหนดค่า URL & Anon Key เพื่อซิงค์ข้อมูลกับ PostgreSQL บนคลาวด์</p>
+                        <h1 class="text-xl font-bold text-slate-900">การตั้งค่าฐานข้อมูล Firebase Cloud</h1>
+                        <p class="text-xs text-slate-500 mt-1">เชื่อมต่อ Firebase Firestore เพื่อจัดเก็บและซิงค์ข้อมูลถาวรข้ามอุปกรณ์</p>
                     </div>
-                    <span class="px-3 py-1 text-xs font-bold rounded-full ${this.supabaseCfg.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
-                        ${this.supabaseCfg.enabled ? '🟢 Supabase Active' : '⚪ Local Mode'}
+                    <span class="px-3 py-1 text-xs font-bold rounded-full ${isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                        ${isConnected ? '🟢 Firebase Active' : '⚪ Local Mode'}
                     </span>
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 text-xs">
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Supabase Project URL</label>
-                        <input type="text" id="supabase-url-input" value="${this.supabaseCfg.url || ''}" placeholder="https://xyz.supabase.co" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" />
-                    </div>
-
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Supabase Anon Key</label>
-                        <input type="password" id="supabase-key-input" value="${this.supabaseCfg.key || ''}" placeholder="ey..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" />
-                    </div>
-
-                    <div class="flex items-center gap-2 pt-2">
-                        <input type="checkbox" id="supabase-enabled-chk" ${this.supabaseCfg.enabled ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded" />
-                        <label for="supabase-enabled-chk" class="text-slate-700 font-medium">เปิดใช้งานเชื่อมต่อ Supabase Realtime</label>
+                        <label class="block font-semibold text-slate-700 mb-1">Firebase Configuration (จาก Firebase Project Settings)</label>
+                        <textarea id="settings-firebase-cfg" rows="9" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "my-project.firebaseapp.com",
+  projectId: "my-project",
+  storageBucket: "my-project.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};' class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">${currentCfg}</textarea>
+                        <p class="text-[11px] text-slate-400 mt-1">สามารถก๊อปปี้ทั้งบล็อกหรือเฉพาะ JSON จากหน้า Firebase Console มาวางได้ทันที</p>
                     </div>
 
                     <div class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                         <button onclick="app.resetMockData()" class="text-rose-600 hover:underline">รีเซ็ตข้อมูลเริ่มต้น</button>
                         <div class="flex items-center gap-2">
-                            <button onclick="app.testSupabaseConnection()" class="px-3.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition">
-                                ทดสอบการเชื่อมต่อ
+                            <button onclick="app.syncWithFirebase()" class="px-3.5 py-2 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition">
+                                ซิงค์ข้อมูลกับ Firebase
                             </button>
-                            <button onclick="app.syncToSupabase()" class="px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition">
-                                ซิงค์ข้อมูลขึ้น Cloud
-                            </button>
-                            <button onclick="app.saveSupabaseConfig()" class="px-4 py-2 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">
-                                บันทึกการตั้งค่า
+                            <button onclick="app.saveFirebaseSettingsView()" class="px-4 py-2 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">
+                                บันทึกการเชื่อมต่อ
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    saveFirebaseSettingsView() {
+        const input = document.getElementById("settings-firebase-cfg")?.value.trim();
+        if (!input) {
+            this.showToast("กรุณาระบุ Firebase Config", "error");
+            return;
+        }
+
+        try {
+            let cfg = null;
+            const match = input.match(/\{[\s\S]*\}/);
+            if (match) {
+                const jsonStr = match[0]
+                    .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+                    .replace(/'([^']*)'/g, '"$1"')
+                    .replace(/,\s*\}/g, '}');
+                cfg = JSON.parse(jsonStr);
+            } else {
+                cfg = JSON.parse(input);
+            }
+
+            if (!cfg || !cfg.projectId) {
+                throw new Error("ต้องมี projectId ใน config");
+            }
+
+            localStorage.setItem("mc_firebase_cfg", JSON.stringify(cfg));
+            this.firebaseCfg = cfg;
+            this.initFirebase();
+            this.showToast("🔥 บันทึกและเชื่อมต่อ Firebase สำเร็จ", "success");
+            this.syncWithFirebase();
+            this.render();
+        } catch (e) {
+            alert("รูปแบบ Firebase Config ไม่ถูกต้อง: " + e.message);
+        }
     }
 
     // =========================================================================
@@ -3496,16 +3586,6 @@ class AccountingApp {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    saveSupabaseConfig() {
-        const url = document.getElementById("supabase-url-input").value.trim();
-        const key = document.getElementById("supabase-key-input").value.trim();
-        const enabled = document.getElementById("supabase-enabled-chk").checked;
-        this.supabaseCfg = { url, key, enabled };
-        this.saveLocalData();
-        this.initSupabaseClient();
-        this.showToast("บันทึกการตั้งค่า Supabase สำเร็จ", "success");
-        this.render();
-    }
 
     resetMockData() {
         if (!confirm("ต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?")) return;
