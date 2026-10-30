@@ -59,10 +59,19 @@ class AccountingApp {
         this.users = storedUsers ? JSON.parse(storedUsers) : [...INITIAL_MOCK_DATA.users];
         this.firebaseCfg = storedFirebase ? JSON.parse(storedFirebase) : null;
 
-        // Authentication & Navigation state: require login if not currently authenticated
-        this.currentUser = storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
+        // Authentication & Navigation state: public mode by default (no login required)
+        const defaultAdmin = (this.users && this.users.length > 0) ? this.users[0] : {
+            id: "admin",
+            username: "admin",
+            full_name: "ผู้ดูแลระบบ (Administrator)",
+            email: "admin",
+            role: "super_admin",
+            title: "ผู้ดูแลระบบศูนย์รวมลิงก์",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+        };
+        this.currentUser = storedCurrentUser ? JSON.parse(storedCurrentUser) : defaultAdmin;
         this.currentCompanyId = this.companies[0] ? this.companies[0].id : null;
-        this.viewMode = this.currentUser ? "portal" : "login"; // 'login', 'portal', 'viewer', or 'workspace'
+        this.viewMode = "portal"; // Direct public access to portal
         this.selectedCategory = "all";
         this.activeTab = "dashboard"; 
         this.activeReportCompany = this.currentCompanyId;
@@ -416,7 +425,8 @@ class AccountingApp {
 
     // 4. RBAC Permissions
     hasPermission(action) {
-        const role = this.currentUser.role;
+        if (!this.currentUser) return true; // In public mode, allow full access
+        const role = this.currentUser.role || "super_admin";
         switch (action) {
             case "view_all_companies":
                 return role === "super_admin" || role === "auditor";
@@ -550,30 +560,25 @@ class AccountingApp {
         const workspaceLayout = document.getElementById("workspace-layout");
         const embeddedViewer = document.getElementById("embedded-viewer-view");
 
-        if (!this.currentUser || this.viewMode === "login") {
-            if (loginView) loginView.classList.remove("hidden");
-            if (portalView) portalView.classList.add("hidden");
-            if (workspaceLayout) workspaceLayout.classList.add("hidden");
-            if (embeddedViewer) embeddedViewer.classList.add("hidden");
-            this.renderLoginScreen();
-        } else if (this.viewMode === "portal") {
-            if (loginView) loginView.classList.add("hidden");
-            if (portalView) portalView.classList.remove("hidden");
-            if (workspaceLayout) workspaceLayout.classList.add("hidden");
-            if (embeddedViewer) embeddedViewer.classList.add("hidden");
-            this.renderPortalScreen();
-        } else if (this.viewMode === "viewer") {
+        if (this.viewMode === "viewer") {
             if (loginView) loginView.classList.add("hidden");
             if (portalView) portalView.classList.add("hidden");
             if (workspaceLayout) workspaceLayout.classList.add("hidden");
             if (embeddedViewer) embeddedViewer.classList.remove("hidden");
             this.renderEmbeddedViewerScreen();
-        } else {
+        } else if (this.viewMode === "workspace") {
             if (loginView) loginView.classList.add("hidden");
             if (portalView) portalView.classList.add("hidden");
             if (workspaceLayout) workspaceLayout.classList.remove("hidden");
             if (embeddedViewer) embeddedViewer.classList.add("hidden");
             this.renderWorkspaceScreen();
+        } else {
+            // Default: Public Portal View
+            if (loginView) loginView.classList.add("hidden");
+            if (portalView) portalView.classList.remove("hidden");
+            if (workspaceLayout) workspaceLayout.classList.add("hidden");
+            if (embeddedViewer) embeddedViewer.classList.add("hidden");
+            this.renderPortalScreen();
         }
 
         if (window.lucide) {
@@ -649,16 +654,21 @@ class AccountingApp {
     }
 
     logout() {
-        this.currentUser = null;
+        const defaultAdmin = (this.users && this.users.length > 0) ? this.users[0] : {
+            id: "admin",
+            username: "admin",
+            full_name: "ผู้ดูแลระบบ (Administrator)",
+            email: "admin",
+            role: "super_admin",
+            title: "ผู้ดูแลระบบศูนย์รวมลิงก์",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+        };
+        this.currentUser = defaultAdmin;
         this.rememberLogin = false;
         localStorage.removeItem("mc_current_user");
         sessionStorage.removeItem("mc_current_user");
-        this.viewMode = "login";
-        const uInput = document.getElementById("login-username");
-        const pInput = document.getElementById("login-password");
-        if (uInput) uInput.value = "";
-        if (pInput) pInput.value = "";
-        this.showToast("ออกจากระบบเรียบร้อยแล้ว", "info");
+        this.viewMode = "portal";
+        this.showToast("รีเซ็ตสถานะเป็นโหมดสาธารณะเรียบร้อยแล้ว", "info");
         this.render();
     }
 
@@ -667,47 +677,23 @@ class AccountingApp {
     // =========================================================================
     renderPortalScreen() {
         const userHeader = document.getElementById("portal-user-header-actions");
-        if (userHeader && this.currentUser) {
-            const roleName = this.getRoleThaiShortName(this.currentUser.role);
-            const isSuperAdmin = this.hasPermission("manage_settings");
-
+        if (userHeader) {
             userHeader.innerHTML = `
-                <!-- User Profile Chip -->
-                <div class="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 py-1 px-2 sm:px-2.5 rounded-xl">
-                    <img src="${this.currentUser.avatar}" class="w-6 h-6 rounded-full object-cover border border-slate-200 flex-shrink-0" />
-                    <div class="text-left hidden xs:block">
-                        <div class="text-xs font-bold text-slate-800 leading-tight truncate max-w-[90px] sm:max-w-none">${this.currentUser.full_name}</div>
-                        <div class="text-[10px] text-slate-400 font-medium">${roleName}</div>
-                    </div>
-                </div>
-
-                <button onclick="app.openChangePasswordModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs active:scale-95" title="เปลี่ยนรหัสผ่าน">
-                    <i data-lucide="key" class="w-3.5 h-3.5 text-amber-600 flex-shrink-0"></i>
-                    <span class="hidden sm:inline">เปลี่ยนรหัส</span>
+                <button onclick="app.openFirebaseModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition shadow-xs active:scale-95" title="ตั้งค่าฐานข้อมูล Firebase">
+                    <span class="text-xs">🔥</span>
+                    <span class="hidden sm:inline">Firebase DB</span>
                 </button>
 
-                ${isSuperAdmin ? `
-                    <button onclick="app.openFirebaseModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition shadow-xs active:scale-95" title="ตั้งค่าฐานข้อมูล Firebase">
-                        <span class="text-xs">🔥</span>
-                        <span class="hidden sm:inline">Firebase DB</span>
-                    </button>
+                <button onclick="app.openUserManagerModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs active:scale-95" title="จัดการผู้ใช้งาน (Gen User)">
+                    <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                    <span class="hidden sm:inline">จัดการผู้ใช้ (Gen User)</span>
+                    <span class="sm:hidden">ผู้ใช้</span>
+                </button>
 
-                    <button onclick="app.openUserManagerModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-xs active:scale-95" title="จัดการผู้ใช้งาน (Gen User)">
-                        <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                        <span class="hidden sm:inline">จัดการผู้ใช้ (Gen User)</span>
-                        <span class="sm:hidden">ผู้ใช้</span>
-                    </button>
-
-                    <button onclick="app.openCompanyModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl transition shadow-sm active:scale-95" title="เพิ่มบริษัท/ระบบงาน">
-                        <i data-lucide="plus" class="w-3.5 h-3.5 flex-shrink-0"></i>
-                        <span class="hidden sm:inline">+ เพิ่มบริษัท</span>
-                        <span class="sm:hidden">+ บริษัท</span>
-                    </button>
-                ` : ''}
-
-                <button onclick="app.logout()" class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl transition active:scale-95" title="ออกจากระบบ">
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">ออกระบบ</span>
+                <button onclick="app.openCompanyModal()" class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold bg-navy-900 hover:bg-slate-800 text-white rounded-xl transition shadow-sm active:scale-95" title="เพิ่มบริษัท/ระบบงาน">
+                    <i data-lucide="plus" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                    <span class="hidden sm:inline">+ เพิ่มบริษัท</span>
+                    <span class="sm:hidden">+ บริษัท</span>
                 </button>
             `;
         }
@@ -1311,22 +1297,11 @@ class AccountingApp {
 
         // Top navigation user profile chip and actions
         const topNavActions = document.getElementById("workspace-user-header-actions");
-        if (topNavActions && this.currentUser) {
-            const roleShort = this.getRoleThaiShortName(this.currentUser.role);
+        if (topNavActions) {
             topNavActions.innerHTML = `
-                <div class="flex items-center gap-2 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                    <img src="${this.currentUser.avatar}" class="w-5 h-5 rounded-full object-cover border border-slate-200" />
-                    <span class="text-xs font-semibold text-slate-800 truncate max-w-[140px]">${this.currentUser.full_name}</span>
-                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700">${roleShort}</span>
-                </div>
-
-                <button onclick="app.openChangePasswordModal()" class="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-semibold text-slate-700 hover:text-navy-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs active:scale-95" title="เปลี่ยนรหัสผ่าน">
-                    <i data-lucide="key" class="w-3.5 h-3.5 text-amber-600"></i>
-                    <span class="hidden sm:inline">เปลี่ยนรหัส</span>
-                </button>
-
-                <button onclick="app.logout()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="ออกจากระบบ">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                <button onclick="app.exitToPortal()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs" title="กลับหน้าศูนย์รวมลิงก์">
+                    <i data-lucide="grid" class="w-3.5 h-3.5 text-blue-600"></i>
+                    <span>กลับหน้ารวมลิงก์</span>
                 </button>
 
                 <button onclick="app.copyCurrentInvite()" class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition" title="คัดลอกลิงก์ตรงเข้าบริษัท">

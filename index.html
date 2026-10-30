@@ -374,23 +374,12 @@
                 </nav>
             </div>
 
-            <!-- Sidebar User Profile Footer with Logout -->
+            <!-- Sidebar User Profile Footer -->
             <div class="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <img id="user-avatar-img" src="" alt="Avatar" class="w-8 h-8 rounded-lg object-cover border border-slate-200" />
-                    <div class="min-w-0">
-                        <div id="user-name-display" class="font-bold text-xs text-slate-900 truncate">ชื่อผู้ใช้งาน</div>
-                        <div id="user-role-badge" class="text-[10px] text-slate-500 truncate">บทบาท</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1 flex-shrink-0">
-                    <button onclick="app.openChangePasswordModal()" title="เปลี่ยนรหัสผ่าน" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
-                        <i data-lucide="key" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="app.logout()" title="ออกจากระบบ" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
-                        <i data-lucide="log-out" class="w-4 h-4"></i>
-                    </button>
-                </div>
+                <button onclick="app.exitToPortal()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition shadow-xs">
+                    <i data-lucide="grid" class="w-4 h-4 text-blue-600"></i>
+                    <span>กลับหน้าศูนย์รวมลิงก์</span>
+                </button>
             </div>
         </aside>
 
