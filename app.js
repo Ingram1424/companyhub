@@ -28,18 +28,6 @@ class AccountingApp {
 
     // 1. Storage & State Initialization
     initStorage() {
-        const DATA_VERSION = "v9_persisted_companies";
-        const storedVersion = localStorage.getItem("mc_data_version");
-
-        if (storedVersion !== DATA_VERSION) {
-            localStorage.setItem("mc_data_version", DATA_VERSION);
-            // If stored companies is empty or missing, seed it with the 5 restored companies
-            const stored = localStorage.getItem("mc_companies");
-            if (!stored || stored === "[]") {
-                localStorage.setItem("mc_companies", JSON.stringify(INITIAL_MOCK_DATA.companies));
-            }
-        }
-
         const storedCompanies = localStorage.getItem("mc_companies");
         const storedTransactions = localStorage.getItem("mc_transactions");
         const storedUsers = localStorage.getItem("mc_users");
@@ -49,8 +37,14 @@ class AccountingApp {
         this.rememberLogin = !!storedLocalUser;
         const storedFirebase = localStorage.getItem("mc_firebase_cfg");
 
-        const parsedCompanies = storedCompanies ? JSON.parse(storedCompanies) : null;
-        this.companies = (parsedCompanies && parsedCompanies.length > 0) 
+        let parsedCompanies = null;
+        try {
+            parsedCompanies = storedCompanies ? JSON.parse(storedCompanies) : null;
+        } catch (e) {
+            parsedCompanies = null;
+        }
+
+        this.companies = (Array.isArray(parsedCompanies) && parsedCompanies.length > 0) 
             ? parsedCompanies 
             : [...INITIAL_MOCK_DATA.companies];
 
@@ -84,7 +78,8 @@ class AccountingApp {
         this.viewerCurrentUrl = null;
         this.viewerCurrentTitle = null;
 
-        this.saveLocalData(true);
+        // Save locally without overwriting Firebase yet until sync completes
+        this.saveLocalData(false);
     }
 
     async syncWithServer() {
@@ -122,23 +117,29 @@ class AccountingApp {
     }
 
     saveLocalData(syncServer = true) {
-        localStorage.setItem("mc_companies", JSON.stringify(this.companies));
-        localStorage.setItem("mc_transactions", JSON.stringify(this.transactions));
-        localStorage.setItem("mc_users", JSON.stringify(this.users));
-        if (this.currentUser) {
-            if (this.rememberLogin) {
-                localStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+        try {
+            localStorage.setItem("mc_companies", JSON.stringify(this.companies));
+            localStorage.setItem("mc_transactions", JSON.stringify(this.transactions));
+            localStorage.setItem("mc_users", JSON.stringify(this.users));
+            if (this.currentUser) {
+                if (this.rememberLogin) {
+                    localStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+                } else {
+                    sessionStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+                }
             } else {
-                sessionStorage.setItem("mc_current_user", JSON.stringify(this.currentUser));
+                localStorage.removeItem("mc_current_user");
+                sessionStorage.removeItem("mc_current_user");
             }
-        } else {
-            localStorage.removeItem("mc_current_user");
-            sessionStorage.removeItem("mc_current_user");
+        } catch (storageErr) {
+            console.warn("localStorage quota exceeded or write failed:", storageErr);
         }
 
         if (syncServer) {
             // 1. Direct Cloud Sync to Firebase Firestore
             if (this.db) {
+                const now = new Date().toISOString();
+                this._lastLocalSaveTime = now;
                 this.db.collection("companyhub").doc("app_data").set({
                     companies: this.companies,
                     users: this.users,
@@ -150,8 +151,11 @@ class AccountingApp {
                         transactions: this.transactions,
                         categories: this.categories
                     }),
-                    updated_at: new Date().toISOString()
-                }, { merge: true }).catch(err => console.warn("Firebase save error:", err));
+                    updated_at: now
+                }, { merge: true }).catch(err => {
+                    console.error("Firebase save error:", err);
+                    this.showToast("บันทึกขึ้น Cloud ไม่สำเร็จ: " + (err.message || err), "error");
+                });
             }
 
             // 2. Local Python server API Sync (if available)
@@ -239,6 +243,10 @@ class AccountingApp {
             // Real-time synchronization listener
             docRef.onSnapshot((snapshot) => {
                 if (!snapshot || !snapshot.exists) return;
+                // If this snapshot update is from local cache write (hasPendingWrites), skip to prevent reverting local changes
+                if (snapshot.metadata && snapshot.metadata.hasPendingWrites) {
+                    return;
+                }
                 const cloudData = snapshot.data();
                 let parsed = cloudData;
                 if (cloudData.json_data) {
@@ -3145,13 +3153,48 @@ class AccountingApp {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            this.tempEditingLogo = e.target.result;
-            const previewBox = document.getElementById("edit-logo-preview-box");
-            if (previewBox) {
-                previewBox.innerHTML = `<img src="${this.tempEditingLogo}" class="w-full h-full object-cover" />`;
-            }
-            const urlInput = document.getElementById("edit-comp-logo-url");
-            if (urlInput) urlInput.value = "";
+            const rawDataUrl = e.target.result;
+            // Compress and resize logo image (max 160x160) to keep base64 tiny (~10-20KB)
+            // This prevents localStorage quota exceeded and Firestore document size limit issues
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 160;
+                let width = img.width;
+                let height = img.height;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                // Convert to compressed webp or jpeg
+                const compressedDataUrl = canvas.toDataURL("image/webp", 0.85);
+                this.tempEditingLogo = compressedDataUrl;
+
+                const previewBox = document.getElementById("edit-logo-preview-box");
+                if (previewBox) {
+                    previewBox.innerHTML = `<img src="${this.tempEditingLogo}" class="w-full h-full object-cover" />`;
+                }
+                const urlInput = document.getElementById("edit-comp-logo-url");
+                if (urlInput) urlInput.value = "";
+            };
+            img.onerror = () => {
+                // Fallback to raw data url if canvas processing fails
+                this.tempEditingLogo = rawDataUrl;
+                const previewBox = document.getElementById("edit-logo-preview-box");
+                if (previewBox) {
+                    previewBox.innerHTML = `<img src="${this.tempEditingLogo}" class="w-full h-full object-cover" />`;
+                }
+            };
+            img.src = rawDataUrl;
         };
         reader.readAsDataURL(file);
     }
